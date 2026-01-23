@@ -25,9 +25,13 @@ Generate Remotion videos directly from your IDE using natural language.
 2. Scroll to "API Keys" section
 3. Click "Create Key" and copy the key (you'll only see it once!)
 
-### Configure in Cursor
+### Configure in Your MCP Client
 
-Add to your Cursor settings (`.cursor/mcp.json`):
+**Cursor** - Add to `.cursor/mcp.json`:
+
+**Claude Desktop** - Add to `claude_desktop_config.json`:
+
+**VS Code / Windsurf** - Follow your editor's MCP configuration guide.
 
 ```json
 {
@@ -51,7 +55,7 @@ npm install -g framlit-mcp
 
 ## Usage
 
-Once configured, you can use Framlit tools in Cursor:
+Once configured, you can use Framlit tools in any MCP-compatible client:
 
 ### Generate Video Code
 
