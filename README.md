@@ -21,9 +21,9 @@ Generate Remotion videos directly from your IDE using natural language.
 
 ### Get Your API Key
 
-1. Go to [Framlit Settings](https://framlit.app/settings/api-keys)
-2. Click "Create API Key"
-3. Copy the key (you'll only see it once!)
+1. Go to [Framlit Profile](https://framlit.app/profile)
+2. Scroll to "API Keys" section
+3. Click "Create Key" and copy the key (you'll only see it once!)
 
 ### Configure in Cursor
 
@@ -140,9 +140,10 @@ FRAMLIT_API_KEY=fml_xxx npm start
 ## Resources
 
 - [Framlit Website](https://framlit.app)
+- [Developer Guide](https://framlit.app/developers)
 - [Documentation](https://framlit.app/docs)
-- [Pricing](https://framlit.app/pricing)
-- [API Key Settings](https://framlit.app/settings/api-keys)
+- [Pricing](https://framlit.app/docs/pricing)
+- [API Key Settings](https://framlit.app/profile)
 
 ## License
 
