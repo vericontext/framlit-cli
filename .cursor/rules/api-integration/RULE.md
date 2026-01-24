@@ -1,65 +1,65 @@
 ---
-description: "Framlit API 연동 패턴. API 클라이언트 수정 시 참고하세요."
+description: "Framlit API integration patterns. Reference when modifying API client."
 globs: ["src/api/**"]
 ---
 
 # Framlit API Integration
 
-## API 엔드포인트
+## API Endpoints
 
 ### Base URL
 - Production: `https://framlit.app/api/mcp`
-- 환경 변수: `FRAMLIT_API_URL` (선택적)
+- Environment variable: `FRAMLIT_API_URL` (optional)
 
-### 인증
+### Authentication
 - Header: `Authorization: Bearer <API_KEY>`
-- API Key 형식: `fml_<random_string>`
+- API Key format: `fml_<random_string>`
 
-## 엔드포인트 목록
+## Endpoint List
 
-| Endpoint | Method | 설명 | Credit |
-|----------|--------|------|--------|
-| `/user` | GET | 사용자 정보 | 0 |
-| `/generate-code` | POST | 코드 생성 | 1 |
-| `/modify-code` | POST | 코드 수정 | 1 |
-| `/projects` | GET | 프로젝트 목록 | 0 |
-| `/projects` | POST | 프로젝트 생성 | 0 |
-| `/projects/:id` | GET | 프로젝트 상세 | 0 |
-| `/projects/:id` | PUT | 프로젝트 수정 | 0 |
-| `/render` | POST | 렌더링 시작 | 0 |
-| `/render/:id` | GET | 렌더링 상태 | 0 |
-| `/templates` | GET | 템플릿 목록 | 0 |
+| Endpoint | Method | Description | Credit |
+|----------|--------|-------------|--------|
+| `/user` | GET | User information | 0 |
+| `/generate-code` | POST | Code generation | 1 |
+| `/modify-code` | POST | Code modification | 1 |
+| `/projects` | GET | Project list | 0 |
+| `/projects` | POST | Create project | 0 |
+| `/projects/:id` | GET | Project details | 0 |
+| `/projects/:id` | PUT | Update project | 0 |
+| `/render` | POST | Start rendering | 0 |
+| `/render/:id` | GET | Rendering status | 0 |
+| `/templates` | GET | Template list | 0 |
 
-## 응답 형식
+## Response Format
 
-### 성공 응답
+### Success Response
 ```typescript
 {
-  data: T;          // 실제 데이터
-  message?: string; // 선택적 메시지
+  data: T;          // Actual data
+  message?: string; // Optional message
 }
 ```
 
-### 에러 응답
+### Error Response
 ```typescript
 {
-  error: string;    // 에러 메시지
-  code?: string;    // 에러 코드 (INSUFFICIENT_CREDITS, PLAN_LIMIT_EXCEEDED 등)
-  details?: any;    // 추가 정보
+  error: string;    // Error message
+  code?: string;    // Error code (INSUFFICIENT_CREDITS, PLAN_LIMIT_EXCEEDED, etc.)
+  details?: any;    // Additional information
 }
 ```
 
-## 에러 코드
+## Error Codes
 
-| Code | 설명 | 대응 |
-|------|------|------|
-| `UNAUTHORIZED` | 인증 실패 | API Key 확인 안내 |
-| `INSUFFICIENT_CREDITS` | 크레딧 부족 | 충전 링크 제공 |
-| `PLAN_LIMIT_EXCEEDED` | 플랜 제한 | 업그레이드 링크 제공 |
-| `NOT_FOUND` | 리소스 없음 | 일반 에러 |
-| `INTERNAL_ERROR` | 서버 에러 | 재시도 안내 |
+| Code | Description | Response |
+|------|-------------|----------|
+| `UNAUTHORIZED` | Authentication failed | Guide to check API Key |
+| `INSUFFICIENT_CREDITS` | Insufficient credits | Provide recharge link |
+| `PLAN_LIMIT_EXCEEDED` | Plan limit exceeded | Provide upgrade link |
+| `NOT_FOUND` | Resource not found | Generic error |
+| `INTERNAL_ERROR` | Server error | Guide to retry |
 
-## API 클라이언트 패턴
+## API Client Pattern
 
 ```typescript
 private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -78,7 +78,7 @@ private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T
   const data = await response.json();
 
   if (!response.ok) {
-    // 에러 처리 + upsell 메시지
+    // Error handling + upsell message
     throw new Error(formatError(data));
   }
 
@@ -86,9 +86,9 @@ private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T
 }
 ```
 
-## 주의사항
+## Important Notes
 
-1. **API Key 노출 금지**: 로그에 API Key를 출력하지 않음
-2. **에러 메시지에 링크 포함**: 사용자가 바로 조치할 수 있도록
-3. **타임아웃 처리**: 코드 생성은 10-30초 걸릴 수 있음
-4. **Rate Limiting**: API에서 429 응답 시 재시도 로직 고려
+1. **Never expose API Key**: Do not log API Key
+2. **Include links in error messages**: So users can take immediate action
+3. **Timeout handling**: Code generation can take 10-30 seconds
+4. **Rate Limiting**: Consider retry logic when API returns 429 response

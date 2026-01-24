@@ -1,35 +1,35 @@
 ---
-description: "framlit-mcp 개발 가이드. MCP 서버 코드 작성 시 참고하세요."
+description: "framlit-mcp development guide. Reference when writing MCP server code."
 alwaysApply: true
 ---
 
 # Framlit MCP Development Guide
 
-## 프로젝트 개요
+## Project Overview
 
-framlit-mcp는 Framlit SaaS의 MCP (Model Context Protocol) 서버입니다.
-Cursor 등 IDE에서 직접 Framlit의 영상 생성 기능을 사용할 수 있게 합니다.
+framlit-mcp is the MCP (Model Context Protocol) server for Framlit SaaS.
+Enables direct use of Framlit's video generation features from IDEs like Cursor.
 
-## 핵심 원칙
+## Core Principles
 
-### 1. SaaS Gateway 역할
-- MCP는 Framlit SaaS API의 클라이언트 역할만 수행
-- 모든 생성 로직은 Framlit SaaS에서 처리
-- Credit 차감도 SaaS에서 처리
+### 1. SaaS Gateway Role
+- MCP only acts as a client for Framlit SaaS API
+- All generation logic is handled by Framlit SaaS
+- Credit deduction is also handled by SaaS
 
-### 2. 인증
-- API Key 기반 인증 (`FRAMLIT_API_KEY` 환경 변수)
-- Bearer 토큰 형식으로 API 호출
+### 2. Authentication
+- API Key-based authentication (`FRAMLIT_API_KEY` environment variable)
+- API calls in Bearer token format
 
-## 코드 패턴
+## Code Patterns
 
-### Tool 정의
+### Tool Definition
 ```typescript
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 
 export const myTool: Tool = {
-  name: 'framlit_<action>',      // 항상 framlit_ prefix
-  description: `설명...`,        // 상세한 설명 (비용, 제한 등 포함)
+  name: 'framlit_<action>',      // Always framlit_ prefix
+  description: `Description...`,  // Detailed description (include cost, limits, etc.)
   inputSchema: {
     type: 'object',
     properties: { ... },
@@ -44,29 +44,29 @@ export async function handleMyTool(
   client: FramlitClient,
   args: Record<string, unknown>
 ) {
-  // 1. 파라미터 추출 및 타입 캐스팅
+  // 1. Extract parameters and type cast
   const param = args.param as string;
   
-  // 2. API 호출
+  // 2. API call
   const result = await client.myMethod(param);
   
-  // 3. 결과 반환 (text content)
+  // 3. Return result (text content)
   return {
     content: [
       {
         type: 'text',
-        text: `결과: ${result}`,
+        text: `Result: ${result}`,
       },
     ],
   };
 }
 ```
 
-### 에러 처리
+### Error Handling
 ```typescript
-// API 클라이언트에서 에러 처리
+// Error handling in API client
 if (!response.ok) {
-  // 특정 에러 코드에 대해 upsell 메시지 추가
+  // Add upsell message for specific error codes
   if (data.code === 'INSUFFICIENT_CREDITS') {
     throw new Error(`${error}\n\n💡 Get more credits at https://framlit.app/pricing`);
   }
@@ -74,47 +74,47 @@ if (!response.ok) {
 }
 ```
 
-## 네이밍 컨벤션
+## Naming Conventions
 
-### Tool 이름
-- 형식: `framlit_<action>` (snake_case)
-- 예: `framlit_generate_code`, `framlit_list_projects`
+### Tool Names
+- Format: `framlit_<action>` (snake_case)
+- Examples: `framlit_generate_code`, `framlit_list_projects`
 
-### 파일 구조
+### File Structure
 ```
 src/
-├── index.ts              # 서버 엔트리
+├── index.ts              # Server entry
 ├── api/
-│   └── client.ts         # Framlit API 클라이언트
+│   └── client.ts         # Framlit API client
 ├── tools/
-│   ├── generate.ts       # 코드 생성 도구
-│   ├── projects.ts       # 프로젝트 도구
+│   ├── generate.ts       # Code generation tool
+│   ├── projects.ts       # Project tool
 │   └── ...
 └── resources/
-    └── user.ts           # 사용자 리소스
+    └── user.ts           # User resource
 ```
 
-## Pro 유도 메시지
+## Pro Upsell Messages
 
-Credit 부족, 플랜 제한 등의 에러 시 upsell 메시지 포함:
+Include upsell messages for errors like insufficient credits, plan limits:
 
 ```typescript
-// 좋은 예
+// Good example
 'Insufficient credits. Get more at https://framlit.app/pricing'
 
-// 나쁜 예 (링크 없음)
+// Bad example (no link)
 'Insufficient credits.'
 ```
 
-## 테스트
+## Testing
 
 ```bash
-# 개발 서버 실행
+# Run development server
 npm run dev
 
-# 빌드
+# Build
 npm run build
 
-# 로컬 테스트 (환경 변수 설정 필요)
+# Local testing (environment variables required)
 FRAMLIT_API_KEY=fml_xxx npm start
 ```
