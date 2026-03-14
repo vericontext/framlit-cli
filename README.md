@@ -50,6 +50,9 @@ Add to your editor's MCP config:
 ### CLI (Terminal)
 
 ```bash
+# Set your API key (get it at https://framlit.app/settings/api-keys)
+export FRAMLIT_API_KEY=fml_your_api_key_here
+
 # Use directly via npx
 npx framlit generate "A logo animation with rotating 3D text"
 
@@ -61,6 +64,9 @@ framlit generate "Product demo with fade-in text"
 ## CLI Usage
 
 ```bash
+# Set your API key first
+export FRAMLIT_API_KEY=fml_your_api_key_here
+
 # Generate video code
 framlit generate "Logo animation with rotating text" --format landscape
 
