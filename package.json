@@ -1,12 +1,12 @@
 {
   "name": "framlit-mcp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "MCP server and CLI for Framlit - AI-powered video generation",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "framlit-mcp": "./dist/mcp/server.js",
-    "framlit": "./dist/cli/index.js"
+    "framlit-mcp": "dist/mcp/server.js",
+    "framlit": "dist/cli/index.js"
   },
   "scripts": {
     "dev": "tsx watch src/mcp/server.ts",
@@ -47,6 +47,6 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/framlit/framlit-mcp.git"
+    "url": "git+https://github.com/framlit/framlit-mcp.git"
   }
 }
