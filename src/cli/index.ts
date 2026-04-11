@@ -34,7 +34,16 @@ import { detectOutputMode, formatOutput, formatError, writeNdjsonLine } from './
 // Helpers
 // ---------------------------------------------------------------------------
 
-const VERSION = '0.2.0';
+// Read version from package.json at runtime
+const VERSION = (() => {
+  try {
+    const pkgPath = require('node:path').resolve(__dirname, '..', '..', 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    return pkg.version || '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+})();
 
 function getApiKey(): string {
   const key = process.env.FRAMLIT_API_KEY;
