@@ -1,18 +1,23 @@
 {
   "name": "framlit-mcp",
-  "version": "0.1.1",
-  "description": "MCP server for Framlit - AI-powered video generation",
+  "version": "0.2.1",
+  "description": "MCP server and CLI for Framlit - AI-powered video generation",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "framlit-mcp": "./dist/index.js"
+    "framlit-mcp": "dist/mcp/server.js",
+    "framlit": "dist/cli/index.js"
   },
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch src/mcp/server.ts",
+    "dev:cli": "tsx src/cli/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/mcp/server.js",
+    "start:cli": "node dist/cli/index.js",
     "lint": "eslint src/",
-    "prepublishOnly": "npm run build"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build && npm run test"
   },
   "keywords": [
     "mcp",
@@ -20,7 +25,8 @@
     "remotion",
     "video",
     "ai",
-    "cursor"
+    "cursor",
+    "cli"
   ],
   "author": "Framlit",
   "license": "MIT",
@@ -32,7 +38,8 @@
     "@types/node": "^20.14.0",
     "eslint": "^8.57.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vitest": "^4.1.4"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -43,6 +50,6 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/framlit/framlit-mcp.git"
+    "url": "git+https://github.com/framlit/framlit-mcp.git"
   }
 }

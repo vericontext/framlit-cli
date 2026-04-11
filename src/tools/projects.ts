@@ -139,7 +139,7 @@ export async function handleCreateProject(
     content: [
       {
         type: 'text',
-        text: `Project created!\n\n**${project.name}** (${project.id})\n\nView at: https://framlit.app/dashboard/${project.id}`,
+        text: `Project created!\n\n**${project.name}** (${project.id})\n\nView at: https://framlit.app/dashboard?project=${project.id}`,
       },
     ],
   };
@@ -159,7 +159,7 @@ export async function handleUpdateProject(
     content: [
       {
         type: 'text',
-        text: `Project updated!\n\n**${project.name}** (${project.id})\n\nView at: https://framlit.app/dashboard/${project.id}`,
+        text: `Project updated!\n\n**${project.name}** (${project.id})\n\nView at: https://framlit.app/dashboard?project=${project.id}`,
       },
     ],
   };

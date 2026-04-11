@@ -1,8 +1,8 @@
-# Framlit MCP
+# Framlit MCP + CLI
 
-MCP (Model Context Protocol) server for [Framlit](https://framlit.app) - AI-powered video generation.
+MCP server and CLI for [Framlit](https://framlit.app) — AI-powered video generation.
 
-Generate Remotion videos directly from your IDE using natural language.
+Generate Remotion videos from your IDE or terminal using natural language.
 
 ## Features
 
@@ -11,6 +11,9 @@ Generate Remotion videos directly from your IDE using natural language.
 - **Project Management**: Create, list, and update Framlit projects
 - **Video Rendering**: Render videos to MP4 via AWS Lambda
 - **Templates**: Browse and use video templates
+- **Narration**: AI-generated voiceover with ElevenLabs TTS
+- **Style Variations**: Generate multiple visual styles from one prompt
+- **Batch Rendering**: Render multiple videos at once with variable substitution
 
 ## Installation
 
@@ -21,17 +24,14 @@ Generate Remotion videos directly from your IDE using natural language.
 
 ### Get Your API Key
 
-1. Go to [Framlit Profile](https://framlit.app/profile)
-2. Scroll to "API Keys" section
-3. Click "Create Key" and copy the key (you'll only see it once!)
+1. Go to [Framlit Settings](https://framlit.app/settings/api-keys)
+2. Click "Create Key" and copy the key (you'll only see it once!)
 
-### Configure in Your MCP Client
+### MCP Server (IDE Integration)
 
-**Cursor** - Add to `.cursor/mcp.json`:
+Add to your editor's MCP config:
 
-**Claude Desktop** - Add to `claude_desktop_config.json`:
-
-**VS Code / Windsurf** - Follow your editor's MCP configuration guide.
+**Cursor** (`.cursor/mcp.json`), **Claude Desktop** (`claude_desktop_config.json`), **VS Code** (MCP settings), **Windsurf** (MCP settings):
 
 ```json
 {
@@ -47,43 +47,83 @@ Generate Remotion videos directly from your IDE using natural language.
 }
 ```
 
-Or install globally:
+### CLI (Terminal)
 
 ```bash
+# Set your API key (get it at https://framlit.app/settings/api-keys)
+export FRAMLIT_API_KEY=fml_your_api_key_here
+
+# Use directly via npx
+npx framlit generate "A logo animation with rotating 3D text"
+
+# Or install globally
 npm install -g framlit-mcp
+framlit generate "Product demo with fade-in text"
 ```
 
-## Usage
+## CLI Usage
 
-Once configured, you can use Framlit tools in any MCP-compatible client:
+```bash
+# Set your API key first
+export FRAMLIT_API_KEY=fml_your_api_key_here
 
-### Generate Video Code
+# Generate video code
+framlit generate "Logo animation with rotating text" --format landscape
 
+# Modify existing code
+framlit modify --code ./video.tsx --instruction "Change background to blue"
+
+# Manage projects
+framlit projects list
+framlit projects get <id>
+framlit projects create "My Video" --code ./video.tsx
+framlit projects update <id> --name "New Name"
+
+# Render video
+framlit render <projectId>
+framlit render status <renderId> --poll   # Stream progress as NDJSON
+
+# Browse templates
+framlit templates --category social
+
+# Preview code
+framlit preview ./video.tsx
+
+# Check credits
+framlit credits
+
+# Discover tool schemas (agent-friendly)
+framlit schema                           # List all tools
+framlit schema framlit_generate_code     # JSON Schema for a specific tool
+
+# Start MCP server from CLI
+framlit mcp
 ```
-Create a 3D logo animation with the text "HELLO" rotating in space
-```
 
-The AI will use `framlit_generate_code` to generate Remotion code.
+### Agent-Friendly Features
 
-### Modify Existing Code
+The CLI is designed to work seamlessly with AI agents:
 
-```
-Change the background color to blue and make the text larger
-```
+- **`--output json`**: Structured JSON output (auto-enabled when piped)
+- **`--json '{"prompt":"..."}'`**: Raw JSON input, bypass arg parsing
+- **`--dry-run`**: Preview mutations without executing
+- **`framlit schema <tool>`**: Runtime schema introspection (Zod → JSON Schema)
+- **`--poll`**: NDJSON streaming for render progress tracking
 
-Uses `framlit_modify_code` with your existing code.
+### Full Render Workflow
 
-### Manage Projects
+```bash
+# 1. Generate code
+framlit generate "Product demo video" --output json > code.json
 
-```
-List my Framlit projects
-Create a new project called "Product Demo"
-```
+# 2. Create a project
+framlit projects create "Product Demo" --code ./generated.tsx --output json
 
-### Render Video
+# 3. Start render
+framlit render <projectId> --output json
 
-```
-Render the project to MP4
+# 4. Poll until complete
+framlit render status <renderId> --poll
 ```
 
 ## Available Tools
@@ -93,27 +133,40 @@ Render the project to MP4
 | `framlit_generate_code` | Generate Remotion code from text | 1 |
 | `framlit_modify_code` | Modify existing code | 1 |
 | `framlit_list_projects` | List your projects | 0 |
-| `framlit_get_project` | Get project details | 0 |
+| `framlit_get_project` | Get project details with code | 0 |
 | `framlit_create_project` | Create a new project | 0 |
 | `framlit_update_project` | Update a project | 0 |
 | `framlit_render_video` | Start video rendering | 0 |
 | `framlit_get_render_status` | Check render progress | 0 |
 | `framlit_list_templates` | Browse templates | 0 |
 | `framlit_get_credits` | Check credit balance | 0 |
+| `framlit_preview_code` | Create temporary preview URL | 0 |
 
 ## Pricing
 
-MCP uses the same credit system as the Framlit web app:
+MCP and CLI use the same credit system as the Framlit web app:
 
-- **Free Plan**: 50 credits/month
-- **Pro Plan**: 500 credits/month ($29/mo)
-- **Credit Packs**: Available for purchase
+- **Hobby (Free)**: 30 credits/month
+- **Pro**: 500 credits/month ($29/mo)
+- **Team**: 2,000 credits/month ($99/mo)
+- **Credit Packs**: 100 for $6 / 350 for $19 / 700 for $35
 
-Each code generation or modification costs 1 credit.
+### Credit Costs
+
+| Action | Credits |
+|--------|---------|
+| Text-to-Code generation | 1 |
+| Code modification | 1 |
+| Image analysis | 3 |
+| Narration (voiceover) | 5 |
+| Style variation | 1 |
+| Batch rendering (per video) | 0.2 |
+| MP4 rendering | 0 |
+| Preview | 0 |
 
 ### Watermark
 
-- Free/Hobby plans: Videos include a Framlit watermark
+- Hobby plan: Videos include a Framlit watermark
 - Pro/Team plans: No watermark
 
 [View Pricing](https://framlit.app/pricing)
@@ -124,14 +177,20 @@ Each code generation or modification costs 1 credit.
 # Install dependencies
 npm install
 
-# Run in development mode
+# Run MCP server in development mode
 npm run dev
+
+# Run CLI in development mode
+npm run dev:cli -- generate "test"
 
 # Build
 npm run build
 
-# Test locally
+# Test MCP server locally
 FRAMLIT_API_KEY=fml_xxx npm start
+
+# Test CLI locally
+FRAMLIT_API_KEY=fml_xxx npm run start:cli -- credits
 ```
 
 ## Environment Variables
@@ -147,7 +206,7 @@ FRAMLIT_API_KEY=fml_xxx npm start
 - [Developer Guide](https://framlit.app/developers)
 - [Documentation](https://framlit.app/docs)
 - [Pricing](https://framlit.app/docs/pricing)
-- [API Key Settings](https://framlit.app/profile)
+- [API Key Settings](https://framlit.app/settings/api-keys)
 
 ## License
 

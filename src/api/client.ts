@@ -81,7 +81,7 @@ export class FramlitClient {
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',
-        'User-Agent': 'framlit-mcp/0.1.0',
+        'User-Agent': 'framlit-mcp/0.2.0',
         ...options.headers,
       },
     });
