@@ -5,6 +5,8 @@
  * Auto-detects piped output and defaults to JSON.
  */
 
+import type { ErrorCode } from './exit-codes.js';
+
 export type OutputMode = 'text' | 'json';
 
 export function detectOutputMode(explicit?: string): OutputMode {
@@ -22,11 +24,11 @@ export function formatOutput(data: unknown, message: string, mode: OutputMode): 
   return message;
 }
 
-export function formatError(error: string, mode: OutputMode): string {
+export function formatError(message: string, mode: OutputMode, code?: ErrorCode): string {
   if (mode === 'json') {
-    return JSON.stringify({ error }, null, 2);
+    return JSON.stringify({ error: { code: code ?? 'API_ERROR', message } }, null, 2);
   }
-  return `Error: ${error}`;
+  return `Error: ${message}`;
 }
 
 /**
