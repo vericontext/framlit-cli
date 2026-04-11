@@ -217,3 +217,146 @@ export async function handlePreviewCode(
     message: `Preview created!\n\nPreview URL: ${result.previewUrl}\n\nOpen the link above in your browser to see the video preview.\n\nExpires in 24 hours`,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Batch
+// ---------------------------------------------------------------------------
+
+export async function handleBatchCreate(
+  client: FramlitClient,
+  args: { rows: string; templateId?: string; templateCode?: string }
+): Promise<HandlerResult> {
+  const rows = JSON.parse(args.rows);
+  const result = await client.createBatch({ rows, templateId: args.templateId, templateCode: args.templateCode });
+
+  return {
+    data: result,
+    message: `Batch job created!\n\nJob ID: ${result.jobId}\nTotal videos: ${result.totalRows}\nEstimated credits: ${result.estimatedCredits}\n\nUse framlit_batch_start to begin rendering.`,
+  };
+}
+
+export async function handleBatchStart(
+  client: FramlitClient,
+  args: { jobId: string }
+): Promise<HandlerResult> {
+  const result = await client.startBatch(args.jobId);
+
+  if (result.status === 'completed') {
+    const completed = result.results?.filter(r => r.status === 'completed') || [];
+    const failed = result.results?.filter(r => r.status === 'failed') || [];
+    let message = `Batch completed!\n\n${completed.length} videos rendered, ${failed.length} failed.\n`;
+    for (const r of completed) {
+      message += `\n- ${r.filename}: ${r.videoUrl}`;
+    }
+    return { data: result, message };
+  }
+
+  return { data: result, message: `Batch status: ${result.status}` };
+}
+
+export async function handleBatchStatus(
+  client: FramlitClient,
+  args: { jobId: string }
+): Promise<HandlerResult> {
+  const result = await client.getBatchStatus(args.jobId);
+
+  let message = `Batch ${args.jobId}\nStatus: ${result.status}`;
+  if (result.progress !== undefined) message += ` (${result.progress}%)`;
+  if (result.results) {
+    const completed = result.results.filter(r => r.status === 'completed');
+    if (completed.length > 0) {
+      message += `\n\nCompleted videos:`;
+      for (const r of completed) {
+        message += `\n- ${r.filename}: ${r.videoUrl}`;
+      }
+    }
+  }
+
+  return { data: result, message };
+}
+
+export async function handleBatchList(
+  client: FramlitClient
+): Promise<HandlerResult> {
+  const jobs = await client.listBatches();
+
+  if (jobs.length === 0) {
+    return { data: jobs, message: 'No batch jobs found.' };
+  }
+
+  const list = jobs
+    .map(j => `- ${j.jobId} (${j.status}) — ${j.totalRows} videos, ${j.progress || 0}%`)
+    .join('\n');
+
+  return { data: jobs, message: `Found ${jobs.length} batch job(s):\n\n${list}` };
+}
+
+export async function handleBatchCancel(
+  client: FramlitClient,
+  args: { jobId: string }
+): Promise<HandlerResult> {
+  const result = await client.cancelBatch(args.jobId);
+
+  return {
+    data: result,
+    message: `Batch cancelled. ${result.completedRows || 0} videos completed, ${result.refundedCredits || 0} credits refunded.`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Style Variations
+// ---------------------------------------------------------------------------
+
+export async function handleGenerateVariations(
+  client: FramlitClient,
+  args: { projectId: string; prompt: string; styles?: string; existingCode?: string; model?: string }
+): Promise<HandlerResult> {
+  const styles = args.styles ? args.styles.split(',').map(s => s.trim()) : undefined;
+  const result = await client.generateVariations({
+    projectId: args.projectId,
+    prompt: args.prompt,
+    styles,
+    existingCode: args.existingCode,
+    model: args.model as 'sonnet' | 'haiku' | undefined,
+  });
+
+  let message = `Generated ${result.totalGenerated} style variation(s) (${result.creditsUsed} credits used, ${result.creditsRemaining} remaining):\n`;
+  for (const v of result.variations) {
+    message += `\n- ${v.style} (${v.id}): ${v.aiReasoning}`;
+  }
+  if (result.errors?.length) {
+    message += `\n\nFailed: ${result.errors.map(e => `${e.style}: ${e.error}`).join(', ')}`;
+  }
+  message += `\n\nUse framlit_apply_variation to apply a style to the project.`;
+
+  return { data: result, message };
+}
+
+export async function handleListVariations(
+  client: FramlitClient,
+  args: { projectId: string }
+): Promise<HandlerResult> {
+  const result = await client.listVariations(args.projectId);
+
+  if (result.totalCount === 0) {
+    return { data: result, message: 'No variations found. Use framlit_generate_variations to create them.' };
+  }
+
+  const list = result.variations
+    .map(v => `- ${v.style} (${v.id})${v.selected ? ' [SELECTED]' : ''}: ${v.aiReasoning || ''}`)
+    .join('\n');
+
+  return { data: result, message: `Found ${result.totalCount} variation(s):\n\n${list}` };
+}
+
+export async function handleApplyVariation(
+  client: FramlitClient,
+  args: { projectId: string; variationId: string }
+): Promise<HandlerResult> {
+  const result = await client.applyVariation(args.projectId, args.variationId);
+
+  return {
+    data: result,
+    message: `Applied ${result.style} style to project ${result.projectId}. The project code has been updated.`,
+  };
+}

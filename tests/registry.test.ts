@@ -3,7 +3,7 @@ import { TOOL_REGISTRY, getToolByName, getToolNames, zodToJsonSchema } from '../
 
 describe('Tool Registry', () => {
   it('should have 11 tools registered', () => {
-    expect(TOOL_REGISTRY).toHaveLength(11);
+    expect(TOOL_REGISTRY).toHaveLength(19);
   });
 
   it('should have unique tool names', () => {
@@ -40,21 +40,25 @@ describe('Tool Registry', () => {
 
   it('getToolNames returns all names', () => {
     const names = getToolNames();
-    expect(names).toHaveLength(11);
+    expect(names).toHaveLength(19);
     expect(names).toContain('framlit_generate_code');
     expect(names).toContain('framlit_render_video');
   });
 
-  it('credit costs: generate tools cost 1, others cost 0', () => {
-    const generateTools = TOOL_REGISTRY.filter((t) => t.category === 'generate');
-    const otherTools = TOOL_REGISTRY.filter((t) => t.category !== 'generate');
-
-    for (const tool of generateTools) {
+  it('credit costs: code gen tools cost 1, most others cost 0', () => {
+    const codeGenTools = TOOL_REGISTRY.filter((t) =>
+      t.name === 'framlit_generate_code' || t.name === 'framlit_modify_code'
+    );
+    for (const tool of codeGenTools) {
       expect(tool.credits).toBe(1);
     }
-    for (const tool of otherTools) {
-      expect(tool.credits).toBe(0);
-    }
+
+    // Batch and variation tools have string-based costs
+    const batchCreate = getToolByName('framlit_batch_create');
+    expect(batchCreate!.credits).toBe('0.2/video');
+
+    const genVariations = getToolByName('framlit_generate_variations');
+    expect(genVariations!.credits).toBe('1/variation');
   });
 });
 
