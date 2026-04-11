@@ -21,7 +21,7 @@ export interface ToolEntry {
   schema: z.ZodObject<z.ZodRawShape>;
   handler: (client: FramlitClient, args: Record<string, unknown>) => Promise<HandlerResult>;
   credits: number | string;
-  category: 'generate' | 'project' | 'render' | 'template' | 'credits' | 'preview';
+  category: 'generate' | 'project' | 'render' | 'template' | 'credits' | 'preview' | 'batch';
 }
 
 // ---------------------------------------------------------------------------
@@ -143,6 +143,82 @@ Preview URLs expire after 24 hours. No credits are consumed.`,
     handler: (c, a) => handlers.handlePreviewCode(c, a as z.infer<typeof schemas.previewCodeSchema>),
     credits: 0,
     category: 'preview',
+  },
+
+  // Batch
+  {
+    name: 'framlit_batch_create',
+    description: `Create a batch video generation job from product data rows.
+Each row becomes one personalized video. Costs 0.2 credits per video.
+
+Pass rows as a JSON array string. Each object's keys map to template props (e.g., productName, price, productImage).
+
+Example rows: [{"productName":"Sneaker","price":"$99","productImage":"https://..."}]`,
+    schema: schemas.createBatchSchema,
+    handler: (c, a) => handlers.handleBatchCreate(c, a as z.infer<typeof schemas.createBatchSchema>),
+    credits: '0.2/video',
+    category: 'batch',
+  },
+  {
+    name: 'framlit_batch_start',
+    description: `Start rendering a batch job. All videos are rendered on AWS Lambda.
+Returns results with download URLs when complete. This may take several minutes for large batches.`,
+    schema: schemas.batchJobIdSchema,
+    handler: (c, a) => handlers.handleBatchStart(c, a as z.infer<typeof schemas.batchJobIdSchema>),
+    credits: 0,
+    category: 'batch',
+  },
+  {
+    name: 'framlit_batch_status',
+    description: 'Check the status of a batch job and get download URLs for completed videos.',
+    schema: schemas.batchJobIdSchema,
+    handler: (c, a) => handlers.handleBatchStatus(c, a as z.infer<typeof schemas.batchJobIdSchema>),
+    credits: 0,
+    category: 'batch',
+  },
+  {
+    name: 'framlit_batch_list',
+    description: 'List all your batch jobs with their status and progress.',
+    schema: schemas.listBatchesSchema,
+    handler: (c) => handlers.handleBatchList(c),
+    credits: 0,
+    category: 'batch',
+  },
+  {
+    name: 'framlit_batch_cancel',
+    description: 'Cancel a pending or processing batch job. Unprocessed videos are refunded.',
+    schema: schemas.batchJobIdSchema,
+    handler: (c, a) => handlers.handleBatchCancel(c, a as z.infer<typeof schemas.batchJobIdSchema>),
+    credits: 0,
+    category: 'batch',
+  },
+
+  // Style Variations
+  {
+    name: 'framlit_generate_variations',
+    description: `Generate style variations of a video for A/B testing.
+Each variation applies a different visual style (minimal, bold, dynamic, cinematic, energetic, playful).
+Costs 1 credit per variation. Free plan: 2 max, Pro: 5, Team: 10.`,
+    schema: schemas.generateVariationsSchema,
+    handler: (c, a) => handlers.handleGenerateVariations(c, a as z.infer<typeof schemas.generateVariationsSchema>),
+    credits: '1/variation',
+    category: 'generate',
+  },
+  {
+    name: 'framlit_list_variations',
+    description: 'List all style variations for a project.',
+    schema: schemas.listVariationsSchema,
+    handler: (c, a) => handlers.handleListVariations(c, a as z.infer<typeof schemas.listVariationsSchema>),
+    credits: 0,
+    category: 'generate',
+  },
+  {
+    name: 'framlit_apply_variation',
+    description: 'Apply a style variation to a project. Updates the project code with the selected variation.',
+    schema: schemas.applyVariationSchema,
+    handler: (c, a) => handlers.handleApplyVariation(c, a as z.infer<typeof schemas.applyVariationSchema>),
+    credits: 0,
+    category: 'generate',
   },
 ];
 

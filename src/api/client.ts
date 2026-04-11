@@ -61,6 +61,45 @@ export interface PreviewResult {
   expiresAt: string;
 }
 
+export interface BatchJob {
+  jobId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+  totalRows: number;
+  completedRows?: number;
+  failedRows?: number;
+  progress?: number;
+  estimatedCredits?: number;
+  results?: Array<{
+    rowIndex: number;
+    filename: string;
+    status: string;
+    videoUrl?: string;
+    error?: string;
+  }>;
+  summary?: Record<string, unknown>;
+  message?: string;
+  refundedCredits?: number;
+}
+
+export interface Variation {
+  id: string;
+  style: string;
+  aiReasoning: string;
+  codeLength?: number;
+  code?: string;
+  selected?: boolean;
+  createdAt?: string;
+}
+
+export interface VariationsResult {
+  projectId: string;
+  totalGenerated: number;
+  creditsUsed: number;
+  creditsRemaining: number;
+  variations: Variation[];
+  errors?: Array<{ style: string; error: string }>;
+}
+
 export class FramlitClient {
   private apiKey: string;
   private baseUrl: string;
@@ -226,6 +265,94 @@ export class FramlitClient {
     return this.request<PreviewResult>('/preview', {
       method: 'POST',
       body: JSON.stringify({ code }),
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Batch
+  // -------------------------------------------------------------------------
+
+  /**
+   * Create a batch job from rows of data
+   */
+  async createBatch(params: {
+    rows: Record<string, string>[];
+    templateId?: string;
+    templateCode?: string;
+  }): Promise<BatchJob> {
+    return this.request<BatchJob>('/batch', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  /**
+   * Start a batch job (triggers rendering)
+   */
+  async startBatch(jobId: string): Promise<BatchJob> {
+    return this.request<BatchJob>(`/batch/${jobId}`, {
+      method: 'POST',
+    });
+  }
+
+  /**
+   * Get batch job status
+   */
+  async getBatchStatus(jobId: string): Promise<BatchJob> {
+    return this.request<BatchJob>(`/batch/${jobId}`);
+  }
+
+  /**
+   * List user's batch jobs
+   */
+  async listBatches(): Promise<BatchJob[]> {
+    return this.request<BatchJob[]>('/batch');
+  }
+
+  /**
+   * Cancel a batch job
+   */
+  async cancelBatch(jobId: string): Promise<BatchJob> {
+    return this.request<BatchJob>(`/batch/${jobId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Style Variations
+  // -------------------------------------------------------------------------
+
+  /**
+   * Generate style variations for a project
+   */
+  async generateVariations(params: {
+    projectId: string;
+    prompt: string;
+    videoFormat?: 'landscape' | 'portrait' | 'square';
+    styles?: string[];
+    existingCode?: string;
+    model?: 'sonnet' | 'haiku';
+  }): Promise<VariationsResult> {
+    return this.request<VariationsResult>('/variations', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  /**
+   * List variations for a project
+   */
+  async listVariations(projectId: string): Promise<{ projectId: string; variations: Variation[]; totalCount: number }> {
+    return this.request<{ projectId: string; variations: Variation[]; totalCount: number }>(`/variations/${projectId}`);
+  }
+
+  /**
+   * Apply a variation to a project
+   */
+  async applyVariation(projectId: string, variationId: string): Promise<{ message: string; projectId: string; variationId: string; style: string }> {
+    return this.request<{ message: string; projectId: string; variationId: string; style: string }>(`/variations/${projectId}`, {
+      method: 'POST',
+      body: JSON.stringify({ variationId }),
     });
   }
 }

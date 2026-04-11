@@ -83,3 +83,40 @@ export const getCreditsSchema = z.object({});
 export const previewCodeSchema = z.object({
   code: z.string().describe('The Remotion code to preview.'),
 });
+
+// ---------------------------------------------------------------------------
+// Batch
+// ---------------------------------------------------------------------------
+
+export const createBatchSchema = z.object({
+  rows: z.string().describe('JSON array of row objects (e.g., [{"productName":"Shoe","price":"$99","productImage":"https://..."}]). Each row generates one video.'),
+  templateId: z.string().optional().describe('Template ID to use as base. Either templateId or templateCode is required.'),
+  templateCode: z.string().optional().describe('Template code to use (if not using a template ID).'),
+});
+
+export const batchJobIdSchema = z.object({
+  jobId: z.string().describe('The batch job ID returned from framlit_batch_create.'),
+});
+
+export const listBatchesSchema = z.object({});
+
+// ---------------------------------------------------------------------------
+// Style Variations
+// ---------------------------------------------------------------------------
+
+export const generateVariationsSchema = z.object({
+  projectId: z.string().describe('The project ID to generate variations for.'),
+  prompt: z.string().describe('Description of the video (used to guide style application).'),
+  styles: z.string().optional().describe('Comma-separated style names: minimal, bold, dynamic, cinematic, energetic, playful. Defaults to "minimal,bold,dynamic". Max depends on plan.'),
+  existingCode: z.string().optional().describe('Existing code to create variations of. If omitted, generates from prompt.'),
+  model: z.string().optional().describe('AI model: "sonnet" (quality, default) or "haiku" (speed).'),
+});
+
+export const listVariationsSchema = z.object({
+  projectId: z.string().describe('The project ID.'),
+});
+
+export const applyVariationSchema = z.object({
+  projectId: z.string().describe('The project ID.'),
+  variationId: z.string().describe('The variation ID to apply.'),
+});
