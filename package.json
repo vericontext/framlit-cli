@@ -1,6 +1,6 @@
 {
   "name": "framlit-mcp",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "MCP server and CLI for Framlit - AI-powered video generation",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
