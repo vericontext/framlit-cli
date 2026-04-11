@@ -29,6 +29,9 @@ import { FramlitClient } from '../api/client.js';
 import { TOOL_REGISTRY, getToolByName, zodToJsonSchema } from '../core/registry.js';
 import * as handlers from '../core/handlers.js';
 import { detectOutputMode, formatOutput, formatError, writeNdjsonLine } from './output.js';
+import { EXIT, exitCodeForError } from './exit-codes.js';
+import type { ErrorCode } from './exit-codes.js';
+import { ValidationError, validateResourceId, validateTextInput, validateSafePath } from './validation.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -48,9 +51,12 @@ const VERSION = (() => {
 function getApiKey(): string {
   const key = process.env.FRAMLIT_API_KEY;
   if (!key) {
-    console.error('Error: FRAMLIT_API_KEY environment variable is required');
-    console.error('Get your API key at https://framlit.app/settings/api-keys');
-    process.exit(1);
+    console.error(formatError(
+      'FRAMLIT_API_KEY environment variable is required. Get your API key at https://framlit.app/settings/api-keys',
+      detectOutputMode(),
+      'AUTH_REQUIRED',
+    ));
+    process.exit(EXIT.AUTH_REQUIRED);
   }
   return key;
 }
@@ -60,9 +66,16 @@ function getApiKey(): string {
  */
 function resolveCodeValue(value: string): string {
   if (existsSync(value) && !value.includes('\n')) {
+    validateSafePath(value, 'file path');
     return readFileSync(value, 'utf-8');
   }
   return value;
+}
+
+/** Print a validation or argument error and exit. */
+function exitInvalidArg(message: string, outputMode: ReturnType<typeof detectOutputMode>): never {
+  console.error(formatError(message, outputMode, 'INVALID_ARGUMENT'));
+  process.exit(EXIT.INVALID_ARGS);
 }
 
 function printHelp(): void {
@@ -92,6 +105,13 @@ GLOBAL OPTIONS
   --output json|text       Output format (auto: JSON when piped)
   --json '{"key":"val"}'   Raw JSON input (bypass arg parsing)
   --dry-run                Preview request without executing
+
+EXIT CODES
+  0  Success
+  1  General error
+  2  Invalid arguments / validation error
+  3  Authentication required (missing API key)
+  4  API error (server-side failure)
 
 EXAMPLES
   framlit generate "Logo animation with rotating 3D text"
@@ -133,9 +153,10 @@ async function cmdGenerate(positionals: string[], options: Record<string, unknow
   }
 
   if (!prompt) {
-    console.error(formatError('prompt is required. Usage: framlit generate <prompt>', outputMode));
-    process.exit(1);
+    exitInvalidArg('prompt is required. Usage: framlit generate <prompt>', outputMode);
   }
+
+  validateTextInput(prompt, 'prompt');
 
   if (options['dry-run']) {
     const payload = { prompt, format: format ?? 'landscape' };
@@ -166,9 +187,10 @@ async function cmdModify(positionals: string[], options: Record<string, unknown>
   }
 
   if (!code || !instruction) {
-    console.error(formatError('--code and --instruction are required', outputMode));
-    process.exit(1);
+    exitInvalidArg('--code and --instruction are required', outputMode);
   }
+
+  validateTextInput(instruction, 'instruction');
 
   if (options['dry-run']) {
     const payload = { code: code.substring(0, 100) + '...', instruction };
@@ -197,7 +219,8 @@ async function cmdProjects(positionals: string[], options: Record<string, unknow
 
     case 'get': {
       const id = positionals[1];
-      if (!id) { console.error(formatError('Project ID required', outputMode)); process.exit(1); }
+      if (!id) exitInvalidArg('Project ID required', outputMode);
+      validateResourceId(id, 'projectId');
       const result = await handlers.handleGetProject(client, { projectId: id });
       console.log(formatOutput(result.data, result.message, outputMode));
       break;
@@ -205,7 +228,8 @@ async function cmdProjects(positionals: string[], options: Record<string, unknow
 
     case 'create': {
       const name = positionals[1];
-      if (!name) { console.error(formatError('Project name required', outputMode)); process.exit(1); }
+      if (!name) exitInvalidArg('Project name required', outputMode);
+      validateTextInput(name, 'project name', 200);
 
       const code = options.code ? resolveCodeValue(options.code as string) : undefined;
       const format = options.format as 'landscape' | 'portrait' | 'square' | undefined;
@@ -222,9 +246,11 @@ async function cmdProjects(positionals: string[], options: Record<string, unknow
 
     case 'update': {
       const id = positionals[1];
-      if (!id) { console.error(formatError('Project ID required', outputMode)); process.exit(1); }
+      if (!id) exitInvalidArg('Project ID required', outputMode);
+      validateResourceId(id, 'projectId');
 
       const name = options.name as string | undefined;
+      if (name) validateTextInput(name, 'project name', 200);
       const code = options.code ? resolveCodeValue(options.code as string) : undefined;
 
       if (options['dry-run']) {
@@ -238,8 +264,8 @@ async function cmdProjects(positionals: string[], options: Record<string, unknow
     }
 
     default:
-      console.error(formatError(`Unknown projects subcommand: ${sub}`, outputMode));
-      process.exit(1);
+      console.error(formatError(`Unknown projects subcommand: ${sub}`, outputMode, 'UNKNOWN_COMMAND'));
+      process.exit(EXIT.INVALID_ARGS);
   }
 }
 
@@ -250,7 +276,8 @@ async function cmdRender(positionals: string[], options: Record<string, unknown>
   // framlit render status <renderId>
   if (positionals[0] === 'status') {
     const renderId = positionals[1];
-    if (!renderId) { console.error(formatError('Render ID required', outputMode)); process.exit(1); }
+    if (!renderId) exitInvalidArg('Render ID required', outputMode);
+    validateResourceId(renderId, 'renderId');
 
     if (options.poll) {
       // Poll mode: stream NDJSON until completion
@@ -274,7 +301,8 @@ async function cmdRender(positionals: string[], options: Record<string, unknown>
 
   // framlit render <projectId>
   const projectId = positionals[0];
-  if (!projectId) { console.error(formatError('Project ID required', outputMode)); process.exit(1); }
+  if (!projectId) exitInvalidArg('Project ID required', outputMode);
+  validateResourceId(projectId, 'projectId');
 
   if (options['dry-run']) {
     console.log(formatOutput({ projectId }, `[dry-run] Would start render for project: ${projectId}`, outputMode));
@@ -290,6 +318,7 @@ async function cmdTemplates(_positionals: string[], options: Record<string, unkn
   const client = new FramlitClient(getApiKey());
 
   const category = options.category as string | undefined;
+  if (category) validateTextInput(category, 'category', 100);
   const official = options.official as boolean | undefined;
 
   const result = await handlers.handleListTemplates(client, { category, official });
@@ -300,7 +329,7 @@ async function cmdPreview(positionals: string[], options: Record<string, unknown
   const outputMode = detectOutputMode(options.output as string | undefined);
 
   const codeInput = positionals[0];
-  if (!codeInput) { console.error(formatError('Code or file path required', outputMode)); process.exit(1); }
+  if (!codeInput) exitInvalidArg('Code or file path required', outputMode);
 
   const code = resolveCodeValue(codeInput);
   const client = new FramlitClient(getApiKey());
@@ -322,8 +351,8 @@ function cmdSchema(positionals: string[], options: Record<string, unknown>): voi
   if (toolName) {
     const entry = getToolByName(toolName);
     if (!entry) {
-      console.error(formatError(`Unknown tool: ${toolName}. Run "framlit schema" to list all tools.`, outputMode));
-      process.exit(1);
+      console.error(formatError(`Unknown tool: ${toolName}. Run "framlit schema" to list all tools.`, outputMode, 'NOT_FOUND'));
+      process.exit(EXIT.INVALID_ARGS);
     }
 
     const schema = {
@@ -433,14 +462,24 @@ async function main(): Promise<void> {
         console.log(VERSION);
         break;
       default:
-        console.error(`Unknown command: ${command}\nRun "framlit help" for usage.`);
-        process.exit(1);
+        console.error(formatError(`Unknown command: ${command}. Run "framlit help" for usage.`, detectOutputMode(values.output as string | undefined), 'UNKNOWN_COMMAND'));
+        process.exit(EXIT.INVALID_ARGS);
     }
   } catch (error) {
     const mode = detectOutputMode(values.output as string | undefined);
+    if (error instanceof ValidationError) {
+      console.error(formatError(error.message, mode, 'VALIDATION_ERROR'));
+      process.exit(EXIT.INVALID_ARGS);
+    }
     const msg = error instanceof Error ? error.message : 'Unknown error';
-    console.error(formatError(msg, mode));
-    process.exit(1);
+    // Detect specific API error codes from message
+    let code: ErrorCode = 'API_ERROR';
+    if (msg.includes('Invalid or revoked API key')) code = 'AUTH_REQUIRED';
+    else if (msg.includes('Insufficient credits')) code = 'INSUFFICIENT_CREDITS';
+    else if (msg.includes('not found')) code = 'NOT_FOUND';
+    else if (msg.includes('rate limit') || msg.includes('429')) code = 'RATE_LIMITED';
+    console.error(formatError(msg, mode, code));
+    process.exit(exitCodeForError(code));
   }
 }
 
