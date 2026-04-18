@@ -1,8 +1,12 @@
-# Framlit MCP + CLI
+# Framlit CLI + MCP
 
-MCP server and CLI for [Framlit](https://framlit.app) — AI-powered video generation.
+CLI and MCP server for [Framlit](https://framlit.app) — AI-powered video generation.
 
-Generate Remotion videos from your IDE or terminal using natural language.
+Generate Remotion videos from your terminal or IDE using natural language.
+
+> **Renamed from `framlit-mcp` → `framlit` in v0.5.0.** Existing MCP
+> configs that invoke `npx framlit-mcp` keep working — the `framlit`
+> package still ships the `framlit-mcp` binary as an alias.
 
 ## Features
 
@@ -51,7 +55,7 @@ Add to your editor's MCP config:
 
 ```bash
 # Install globally
-npm install -g framlit-mcp
+npm install -g framlit
 
 # Authorize this machine — opens your browser
 framlit login
