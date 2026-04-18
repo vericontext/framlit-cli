@@ -1,6 +1,6 @@
 {
   "name": "framlit",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "CLI and MCP server for Framlit - AI-powered video generation. Includes `framlit` command and `framlit-mcp` binary for IDE integrations.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -50,6 +50,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/framlit/framlit-mcp.git"
-  }
+    "url": "git+https://github.com/vericontext/framlit-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vericontext/framlit-cli/issues"
+  },
+  "homepage": "https://framlit.app/developers"
 }
