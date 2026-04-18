@@ -32,6 +32,10 @@ import { detectOutputMode, formatOutput, formatError, writeNdjsonLine } from './
 import { EXIT, exitCodeForError } from './exit-codes.js';
 import type { ErrorCode } from './exit-codes.js';
 import { ValidationError, validateResourceId, validateTextInput, validateSafePath } from './validation.js';
+import { loadConfig } from './config.js';
+import { cmdLogin } from './commands/login.js';
+import { cmdWhoami } from './commands/whoami.js';
+import { cmdLogout } from './commands/logout.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -49,16 +53,22 @@ const VERSION = (() => {
 })();
 
 function getApiKey(): string {
-  const key = process.env.FRAMLIT_API_KEY;
-  if (!key) {
-    console.error(formatError(
-      'FRAMLIT_API_KEY environment variable is required. Get your API key at https://framlit.app/settings/api-keys',
-      detectOutputMode(),
-      'AUTH_REQUIRED',
-    ));
-    process.exit(EXIT.AUTH_REQUIRED);
-  }
-  return key;
+  // Precedence: FRAMLIT_API_KEY env var > saved CLI config.
+  // Env var wins so CI / agent setups with `-e FRAMLIT_API_KEY=...` keep
+  // working identically.
+  const envKey = process.env.FRAMLIT_API_KEY;
+  if (envKey) return envKey;
+
+  const cfg = loadConfig();
+  if (cfg?.api_key) return cfg.api_key;
+
+  console.error(formatError(
+    'No API key configured. Run: framlit login\n' +
+    '  or: export FRAMLIT_API_KEY=fml_xxx  (create at https://framlit.app/developers)',
+    detectOutputMode(),
+    'AUTH_REQUIRED',
+  ));
+  process.exit(EXIT.AUTH_REQUIRED);
 }
 
 /**
@@ -85,6 +95,9 @@ USAGE
   framlit <command> [options]
 
 COMMANDS
+  login                    Authorize this machine — opens browser
+  whoami                   Show the current account + credits
+  logout                   Remove the saved API key
   generate <prompt>        Generate Remotion video code from text
   modify                   Modify existing Remotion code
   projects list            List your projects
@@ -122,8 +135,12 @@ EXAMPLES
   framlit schema framlit_generate_code
   echo '{"prompt":"test"}' | framlit generate --json -
 
+AUTH
+  Run \`framlit login\` once to save your API key to ~/.framlit/config.
+  Alternatively, set FRAMLIT_API_KEY (env var overrides the saved config).
+
 ENVIRONMENT
-  FRAMLIT_API_KEY          Your Framlit API key (required)
+  FRAMLIT_API_KEY          Your Framlit API key (optional if logged in)
   FRAMLIT_API_URL          Custom API URL (optional, for development)
 
 More info: https://framlit.app/developers`);
@@ -429,6 +446,15 @@ async function main(): Promise<void> {
 
   try {
     switch (command) {
+      case 'login':
+        await cmdLogin();
+        break;
+      case 'whoami':
+        await cmdWhoami(values);
+        break;
+      case 'logout':
+        cmdLogout();
+        break;
       case 'generate':
         await cmdGenerate(rest, values);
         break;
