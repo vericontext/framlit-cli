@@ -50,22 +50,26 @@ Add to your editor's MCP config:
 ### CLI (Terminal)
 
 ```bash
-# Set your API key (get it at https://framlit.app/settings/api-keys)
-export FRAMLIT_API_KEY=fml_your_api_key_here
-
-# Use directly via npx
-npx framlit generate "A logo animation with rotating 3D text"
-
-# Or install globally
+# Install globally
 npm install -g framlit-mcp
+
+# Authorize this machine — opens your browser
+framlit login
+
+# You're ready
 framlit generate "Product demo with fade-in text"
 ```
+
+Prefer an env var? `export FRAMLIT_API_KEY=fml_...` still works and takes
+precedence over `framlit login` — handy for CI and container setups.
 
 ## CLI Usage
 
 ```bash
-# Set your API key first
-export FRAMLIT_API_KEY=fml_your_api_key_here
+# One-time auth (or set FRAMLIT_API_KEY in your shell)
+framlit login
+framlit whoami                           # email / plan / credits
+framlit logout                           # remove ~/.framlit/config
 
 # Generate video code
 framlit generate "Logo animation with rotating text" --format landscape
