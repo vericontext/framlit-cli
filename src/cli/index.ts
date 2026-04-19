@@ -37,6 +37,7 @@ import { cmdLogin } from './commands/login.js';
 import { cmdWhoami } from './commands/whoami.js';
 import { cmdLogout } from './commands/logout.js';
 import { cmdBatch } from './commands/batch.js';
+import { cmdVariations } from './commands/variations.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -115,6 +116,9 @@ COMMANDS
   batch status <jobId>     Check batch status (--poll → NDJSON stream)
   batch list               List all batch jobs
   batch cancel <jobId>     Cancel a batch job
+  variations generate <projectId> --prompt "..."   Generate style variations
+  variations list <projectId>                      List variations for a project
+  variations apply <projectId> <variationId>       Apply a variation to project
   schema [tool-name]       Show tool schemas (agent discovery)
   mcp                      Start MCP server (for IDE integration)
   version                  Show version
@@ -447,6 +451,12 @@ async function main(): Promise<void> {
       'rows-file': { type: 'string' },
       'template-id': { type: 'string' },
       'template-code': { type: 'string' },
+
+      // variations
+      prompt: { type: 'string' },
+      styles: { type: 'string' },
+      'existing-code': { type: 'string' },
+      model: { type: 'string' },
     },
   });
 
@@ -492,6 +502,9 @@ async function main(): Promise<void> {
         break;
       case 'batch':
         await cmdBatch(rest, values, getApiKey);
+        break;
+      case 'variations':
+        await cmdVariations(rest, values, getApiKey);
         break;
       case 'schema':
         cmdSchema(rest, values);
