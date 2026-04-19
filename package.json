@@ -1,12 +1,12 @@
 {
   "name": "framlit",
   "version": "0.5.1",
-  "description": "CLI and MCP server for Framlit - AI-powered video generation. Includes `framlit` command and `framlit-mcp` binary for IDE integrations.",
+  "description": "Framlit CLI — generate Remotion videos from your terminal. Ships an MCP server for Claude/Cursor/VS Code on the side.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "framlit-mcp": "dist/mcp/server.js",
-    "framlit": "dist/cli/index.js"
+    "framlit": "dist/cli/index.js",
+    "framlit-mcp": "dist/mcp/server.js"
   },
   "scripts": {
     "dev": "tsx watch src/mcp/server.ts",
@@ -20,13 +20,14 @@
     "prepublishOnly": "npm run build && npm run test"
   },
   "keywords": [
-    "mcp",
     "framlit",
+    "cli",
     "remotion",
     "video",
     "ai",
+    "mcp",
     "cursor",
-    "cli"
+    "claude"
   ],
   "author": "Framlit",
   "license": "MIT",

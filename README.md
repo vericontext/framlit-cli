@@ -1,220 +1,201 @@
-# Framlit CLI + MCP
+# framlit
 
-CLI and MCP server for [Framlit](https://framlit.app) — AI-powered video generation.
-
-Generate Remotion videos from your terminal or IDE using natural language.
-
-> **Renamed from `framlit-mcp` → `framlit` in v0.5.0.** Existing MCP
-> configs that invoke `npx framlit-mcp` keep working — the `framlit`
-> package still ships the `framlit-mcp` binary as an alias.
-
-## Features
-
-- **Generate Video Code**: Create Remotion video code from text descriptions
-- **Modify Code**: Edit existing code with natural language instructions
-- **Project Management**: Create, list, and update Framlit projects
-- **Video Rendering**: Render videos to MP4 via AWS Lambda
-- **Templates**: Browse and use video templates
-- **Narration**: AI-generated voiceover with ElevenLabs TTS
-- **Style Variations**: Generate multiple visual styles from one prompt
-- **Batch Rendering**: Render multiple videos at once with variable substitution
-
-## Installation
-
-### Prerequisites
-
-- Node.js 18+
-- A Framlit account with API key
-
-### Get Your API Key
-
-1. Go to [Framlit Settings](https://framlit.app/settings/api-keys)
-2. Click "Create Key" and copy the key (you'll only see it once!)
-
-### MCP Server (IDE Integration)
-
-Add to your editor's MCP config:
-
-**Cursor** (`.cursor/mcp.json`), **Claude Desktop** (`claude_desktop_config.json`), **VS Code** (MCP settings), **Windsurf** (MCP settings):
-
-```json
-{
-  "mcpServers": {
-    "framlit": {
-      "command": "npx",
-      "args": ["framlit-mcp"],
-      "env": {
-        "FRAMLIT_API_KEY": "fml_your_api_key_here"
-      }
-    }
-  }
-}
-```
-
-### CLI (Terminal)
+CLI for [Framlit](https://framlit.app) — AI-powered video generation. Generate
+Remotion videos from your terminal, render via AWS Lambda, batch-personalize
+hundreds at a time. Ships an MCP server for Claude / Cursor / VS Code on the
+side.
 
 ```bash
-# Install globally
 npm install -g framlit
-
-# Authorize this machine — opens your browser
 framlit login
-
-# You're ready
-framlit generate "Product demo with fade-in text"
+framlit generate "Logo animation with rotating text"
 ```
 
-Prefer an env var? `export FRAMLIT_API_KEY=fml_...` still works and takes
-precedence over `framlit login` — handy for CI and container setups.
+## Why a CLI
 
-## CLI Usage
+The CLI is the canonical surface for everything programmatic — CI pipelines,
+cron jobs, agency batch runs, headless personalization for product catalogs.
+The web app handles single videos and visual editing; the CLI handles the
+hundredth and the thousandth.
+
+- **Composable**: every command supports `--output json` (auto when piped) +
+  `--json '<payload>'` for raw JSON-RPC-style input.
+- **Streamable**: long-running calls (`render --poll`, `batch start --poll`)
+  emit NDJSON status frames you can pipe through `jq`.
+- **Safe to script**: every mutating command supports `--dry-run`. Strict
+  input validation rejects path traversal, control chars, ID injection.
+- **Self-describing**: `framlit schema` returns JSON Schema for every tool —
+  no man pages to scrape.
+- **One binary, two protocols**: same install (`npm i -g framlit`) ships
+  both the `framlit` CLI and the `framlit-mcp` server.
+
+## Install
 
 ```bash
-# One-time auth (or set FRAMLIT_API_KEY in your shell)
-framlit login
-framlit whoami                           # email / plan / credits
-framlit logout                           # remove ~/.framlit/config
+# Prerequisites: Node 18+
 
-# Generate video code
-framlit generate "Logo animation with rotating text" --format landscape
+npm install -g framlit
+framlit login                  # opens browser, saves ~/.framlit/config
+framlit whoami                 # email · plan · credits
+```
 
-# Modify existing code
+Or set an env var (precedence over `framlit login` — handy for CI / containers):
+
+```bash
+export FRAMLIT_API_KEY=fml_xxx  # create at https://framlit.app/developers
+```
+
+## Commands
+
+```bash
+# Generate / modify
+framlit generate "Product demo with fade-in text" --format portrait
 framlit modify --code ./video.tsx --instruction "Change background to blue"
 
-# Manage projects
+# Projects
 framlit projects list
 framlit projects get <id>
 framlit projects create "My Video" --code ./video.tsx
 framlit projects update <id> --name "New Name"
 
-# Render video
+# Render (single video)
 framlit render <projectId>
-framlit render status <renderId> --poll   # Stream progress as NDJSON
+framlit render status <renderId> --poll          # NDJSON until done
 
-# Browse templates
+# Batch (many videos from one template)
+framlit batch create --rows-file rows.json --template-id flash-sale-burst
+framlit batch start <jobId> --poll               # NDJSON until done
+framlit batch status <jobId>
+framlit batch list
+framlit batch cancel <jobId>
+
+# Style variations (A/B testing)
+framlit variations generate <projectId> --prompt "..." --styles minimal,bold
+framlit variations list <projectId>
+framlit variations apply <projectId> <variationId>
+
+# Discovery
 framlit templates --category social
-
-# Preview code
-framlit preview ./video.tsx
-
-# Check credits
 framlit credits
-
-# Discover tool schemas (agent-friendly)
-framlit schema                           # List all tools
-framlit schema framlit_generate_code     # JSON Schema for a specific tool
-
-# Start MCP server from CLI
-framlit mcp
+framlit schema                                    # all tools
+framlit schema framlit_generate_code              # JSON Schema for one tool
 ```
 
-### Agent-Friendly Features
+Run `framlit help` for the full reference.
 
-The CLI is designed to work seamlessly with AI agents:
+## Agent-friendly conventions
 
-- **`--output json`**: Structured JSON output (auto-enabled when piped)
-- **`--json '{"prompt":"..."}'`**: Raw JSON input, bypass arg parsing
-- **`--dry-run`**: Preview mutations without executing
-- **`framlit schema <tool>`**: Runtime schema introspection (Zod → JSON Schema)
-- **`--poll`**: NDJSON streaming for render progress tracking
+| Flag | Behavior |
+|---|---|
+| `--output json\|text` | Force output mode. Auto-JSON when stdout is piped. |
+| `--json '<payload>'` or `--json -` (stdin) | Raw JSON-RPC-style input — bypasses bespoke flags, maps 1:1 to tool schema. |
+| `--dry-run` | Validate + preview a mutating call without executing. Works without an API key. |
+| `--poll` | NDJSON status stream until terminal state. On `render status`, `batch start`, `batch status`. |
+| `framlit schema [tool]` | Runtime JSON Schema introspection for agents. |
 
-### Full Render Workflow
+Errors go to stderr as JSON when output is JSON:
+
+```json
+{ "error": { "code": "VALIDATION_ERROR", "message": "..." } }
+```
+
+Exit codes: `0` success · `1` general · `2` invalid args / validation · `3`
+auth required · `4` API error.
+
+## Example: batch-personalize a catalog
 
 ```bash
-# 1. Generate code
-framlit generate "Product demo video" --output json > code.json
+# rows.json — one object per video; keys map to template props
+cat > rows.json <<'JSON'
+[
+  {"productName":"Linen Tee",   "price":"$48", "productImage":"https://..."},
+  {"productName":"Wool Hoodie", "price":"$129","productImage":"https://..."}
+]
+JSON
 
-# 2. Create a project
-framlit projects create "Product Demo" --code ./generated.tsx --output json
-
-# 3. Start render
-framlit render <projectId> --output json
-
-# 4. Poll until complete
-framlit render status <renderId> --poll
+# Create + start, stream until done, extract download URLs
+framlit batch create --rows-file rows.json --template-id flash-sale-burst --output json \
+  | jq -r '.jobId' \
+  | xargs -I {} framlit batch start {} --poll \
+  | jq -r 'select(.status=="completed") | .results[].videoUrl'
 ```
 
-## Available Tools
+## MCP server (for IDE integration)
 
-| Tool | Description | Credits |
-|------|-------------|---------|
-| `framlit_generate_code` | Generate Remotion code from text | 1 |
-| `framlit_modify_code` | Modify existing code | 1 |
-| `framlit_list_projects` | List your projects | 0 |
-| `framlit_get_project` | Get project details with code | 0 |
-| `framlit_create_project` | Create a new project | 0 |
-| `framlit_update_project` | Update a project | 0 |
-| `framlit_render_video` | Start video rendering | 0 |
-| `framlit_get_render_status` | Check render progress | 0 |
-| `framlit_list_templates` | Browse templates | 0 |
-| `framlit_get_credits` | Check credit balance | 0 |
-| `framlit_preview_code` | Create temporary preview URL | 0 |
+The same package ships an MCP server. Add to your IDE's config:
+
+```jsonc
+{
+  "mcpServers": {
+    "framlit": {
+      "command": "npx",
+      "args": ["framlit-mcp"],
+      "env": { "FRAMLIT_API_KEY": "fml_your_api_key_here" }
+    }
+  }
+}
+```
+
+Works with Cursor (`.cursor/mcp.json`), Claude Desktop
+(`claude_desktop_config.json`), VS Code, Windsurf. Every CLI command above is
+also exposed as an MCP tool — same handlers, same auth, same credits.
+
+> **Back-compat note:** This package was renamed `framlit-mcp` → `framlit` in
+> v0.5.0. Existing configs invoking `npx framlit-mcp` keep working — the
+> `framlit` package still ships the `framlit-mcp` binary as an alias.
+
+## Tools
+
+All tools below are available as both CLI commands and MCP tools.
+
+| Tool | CLI | Credits |
+|------|-----|---------|
+| `framlit_generate_code` | `framlit generate` | 1 |
+| `framlit_modify_code` | `framlit modify` | 1 |
+| `framlit_list_projects` | `framlit projects list` | 0 |
+| `framlit_get_project` | `framlit projects get` | 0 |
+| `framlit_create_project` | `framlit projects create` | 0 |
+| `framlit_update_project` | `framlit projects update` | 0 |
+| `framlit_render_video` | `framlit render` | 0 |
+| `framlit_get_render_status` | `framlit render status` | 0 |
+| `framlit_list_templates` | `framlit templates` | 0 |
+| `framlit_get_credits` | `framlit credits` | 0 |
+| `framlit_preview_code` | `framlit preview` | 0 |
+| `framlit_batch_create` | `framlit batch create` | 0.2 / video |
+| `framlit_batch_start` | `framlit batch start` | 0 |
+| `framlit_batch_status` | `framlit batch status` | 0 |
+| `framlit_batch_list` | `framlit batch list` | 0 |
+| `framlit_batch_cancel` | `framlit batch cancel` | 0 |
+| `framlit_generate_variations` | `framlit variations generate` | 1 / variation |
+| `framlit_list_variations` | `framlit variations list` | 0 |
+| `framlit_apply_variation` | `framlit variations apply` | 0 |
 
 ## Pricing
 
-MCP and CLI use the same credit system as the Framlit web app:
-
-- **Hobby (Free)**: 30 credits/month
-- **Pro**: 500 credits/month ($29/mo)
-- **Team**: 2,000 credits/month ($99/mo)
-- **Credit Packs**: 100 for $6 / 350 for $19 / 700 for $35
-
-### Credit Costs
-
-| Action | Credits |
-|--------|---------|
-| Text-to-Code generation | 1 |
-| Code modification | 1 |
-| Image analysis | 3 |
-| Narration (voiceover) | 5 |
-| Style variation | 1 |
-| Batch rendering (per video) | 0.2 |
-| MP4 rendering | 0 |
-| Preview | 0 |
-
-### Watermark
-
-- Hobby plan: Videos include a Framlit watermark
-- Pro/Team plans: No watermark
-
-[View Pricing](https://framlit.app/pricing)
+CLI and MCP use the same credit system as the Framlit web app — see
+[framlit.app/pricing](https://framlit.app/pricing) for current limits and
+prices. Hobby plan videos include a watermark; Pro and Team don't.
 
 ## Development
 
 ```bash
-# Install dependencies
 npm install
-
-# Run MCP server in development mode
-npm run dev
-
-# Run CLI in development mode
-npm run dev:cli -- generate "test"
-
-# Build
+npm run dev:cli -- generate "test"        # CLI in watch mode
+npm run dev                               # MCP server in watch mode
 npm run build
-
-# Test MCP server locally
-FRAMLIT_API_KEY=fml_xxx npm start
-
-# Test CLI locally
-FRAMLIT_API_KEY=fml_xxx npm run start:cli -- credits
+npm test
 ```
 
-## Environment Variables
+## Environment
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `FRAMLIT_API_KEY` | Your Framlit API key | Yes |
-| `FRAMLIT_API_URL` | Custom API URL (for development) | No |
+| Variable | Description |
+|---|---|
+| `FRAMLIT_API_KEY` | Your API key. Overrides `framlit login` config. |
+| `FRAMLIT_API_URL` | Custom API URL (for local development). |
 
-## Resources
+## Links
 
-- [Framlit Website](https://framlit.app)
-- [Developer Guide](https://framlit.app/developers)
-- [Documentation](https://framlit.app/docs)
-- [Pricing](https://framlit.app/docs/pricing)
-- [API Key Settings](https://framlit.app/settings/api-keys)
+- [framlit.app](https://framlit.app) · [Developers](https://framlit.app/developers) · [Pricing](https://framlit.app/pricing) · [API Keys](https://framlit.app/settings/api-keys)
 
 ## License
 
