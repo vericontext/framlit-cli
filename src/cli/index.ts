@@ -36,6 +36,7 @@ import { loadConfig } from './config.js';
 import { cmdLogin } from './commands/login.js';
 import { cmdWhoami } from './commands/whoami.js';
 import { cmdLogout } from './commands/logout.js';
+import { cmdBatch } from './commands/batch.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -109,6 +110,11 @@ COMMANDS
   templates                Browse video templates
   preview <code|file>      Create a preview URL
   credits                  Check credit balance
+  batch create             Create a batch job (--rows / --rows-file + --template-id)
+  batch start <jobId>      Start rendering a batch job (--poll → NDJSON stream)
+  batch status <jobId>     Check batch status (--poll → NDJSON stream)
+  batch list               List all batch jobs
+  batch cancel <jobId>     Cancel a batch job
   schema [tool-name]       Show tool schemas (agent discovery)
   mcp                      Start MCP server (for IDE integration)
   version                  Show version
@@ -134,6 +140,8 @@ EXAMPLES
   framlit render status xyz789 --poll
   framlit schema framlit_generate_code
   echo '{"prompt":"test"}' | framlit generate --json -
+  framlit batch create --rows-file rows.json --template-id flash-sale-burst
+  framlit batch start job_abc --poll | jq -r 'select(.status=="completed")'
 
 AUTH
   Run \`framlit login\` once to save your API key to ~/.framlit/config.
@@ -431,8 +439,14 @@ async function main(): Promise<void> {
       category: { type: 'string' },
       official: { type: 'boolean' },
 
-      // render status
+      // render status / batch start / batch status
       poll: { type: 'boolean' },
+
+      // batch
+      rows: { type: 'string' },
+      'rows-file': { type: 'string' },
+      'template-id': { type: 'string' },
+      'template-code': { type: 'string' },
     },
   });
 
@@ -475,6 +489,9 @@ async function main(): Promise<void> {
         break;
       case 'credits':
         await cmdCredits(values);
+        break;
+      case 'batch':
+        await cmdBatch(rest, values, getApiKey);
         break;
       case 'schema':
         cmdSchema(rest, values);
