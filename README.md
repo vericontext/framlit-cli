@@ -64,6 +64,7 @@ framlit render status <renderId> --poll          # NDJSON until done
 
 # Batch (many videos from one template)
 framlit batch create --rows-file rows.json --template-id flash-sale-burst
+framlit batch create --manifest catalog.json --template-id spotlight-minimal  # local images
 framlit batch start <jobId> --poll               # NDJSON until done
 framlit batch status <jobId>
 framlit batch list
@@ -119,6 +120,38 @@ framlit batch create --rows-file rows.json --template-id flash-sale-burst --outp
   | xargs -I {} framlit batch start {} --poll \
   | jq -r 'select(.status=="completed") | .results[].videoUrl'
 ```
+
+## Example: batch from a local catalog (`--manifest`)
+
+When your product photos live on disk (Etsy, Squarespace, pre-launch brands),
+use `--manifest` to upload them as part of `batch create`. Any key ending in
+`Path` is treated as a local file — the CLI uploads it and substitutes the
+resulting URL under the matching non-`Path` key.
+
+```bash
+# catalog.json lives alongside ./photos/*.jpg
+cat > catalog.json <<'JSON'
+[
+  { "productImagePath": "./photos/cloud-runner.jpg", "productName": "Cloud Runner", "price": "$129" },
+  { "productImagePath": "./photos/hydration-vest.jpg", "productName": "Hydration Vest", "price": "$89" },
+  { "productImage": "https://cdn.example.com/existing.jpg", "productName": "Signature Tee", "price": "$39" }
+]
+JSON
+
+# Dry-run first to see what will upload
+framlit batch create --manifest catalog.json --template-id spotlight-minimal --dry-run
+
+# Run for real — uploads 2 images then creates the batch
+framlit batch create --manifest catalog.json --template-id spotlight-minimal
+```
+
+Rules:
+- Field suffix `Path` → local file path (relative to the manifest's directory, or absolute).
+  The uploaded URL replaces that key with the non-`Path` counterpart.
+- Same field without `Path` → URL or data URL → passed through unchanged.
+- `http://`, `https://`, or `data:` URLs under a `*Path` key are hoisted automatically
+  (no upload trip).
+- Supported extensions: `.jpg` / `.jpeg` / `.png` / `.webp` / `.gif`. Max 5 MiB per image.
 
 ## MCP server (for IDE integration)
 

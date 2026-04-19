@@ -2,11 +2,17 @@
  * `framlit batch` — batch video generation.
  *
  * Subcommands:
- *   framlit batch create  --rows '<json>' | --rows-file <path>  --template-id <id>|--template-code <code|path>
+ *   framlit batch create  (--rows '<json>' | --rows-file <path> | --manifest <path>)  --template-id <id>|--template-code <code|path>
  *   framlit batch start   <jobId> [--poll]
  *   framlit batch status  <jobId> [--poll]
  *   framlit batch list
  *   framlit batch cancel  <jobId>
+ *
+ *  Manifest mode (issue #90):
+ *   Pass `--manifest <path.json>` to feed a catalog of products with
+ *   local image paths. Any key ending in `Path` is uploaded via
+ *   `/api/mcp/assets/upload` and the result is substituted under the
+ *   matching non-`Path` key before the batch is submitted.
  *
  * Designed for agent + script use:
  *   - JSON-first I/O (auto when piped; explicit via --output json)
@@ -17,8 +23,15 @@
  */
 
 import { readFileSync, existsSync } from 'node:fs';
+import { basename, isAbsolute, resolve as resolvePath } from 'node:path';
 import { FramlitClient } from '../../api/client.js';
 import * as handlers from '../../core/handlers.js';
+import {
+  applyUploadResults,
+  mimeFromFilename,
+  parseManifest,
+  type PendingUpload,
+} from '../../core/manifest.js';
 import {
   detectOutputMode,
   formatOutput,
@@ -104,8 +117,16 @@ function buildCreateArgs(options: Record<string, unknown>, mode: OutputMode): Cr
     rows = readFileSync(path, 'utf-8');
   } else if (options.rows) {
     rows = options.rows as string;
+  } else if (options.manifest) {
+    // Manifest mode: rows are assembled in `batchCreate` after uploading
+    // any *Path fields. At arg-build time we leave rows as a placeholder
+    // so validateCreateArgs doesn't trip on empty input.
+    rows = '[]';
   } else {
-    exitInvalidArg('Provide --rows <json> or --rows-file <path> (or --json <payload>)', mode);
+    exitInvalidArg(
+      'Provide --rows <json>, --rows-file <path>, --manifest <path>, or --json <payload>',
+      mode,
+    );
   }
 
   const templateId = options['template-id'] as string | undefined;
@@ -148,6 +169,86 @@ async function batchCreate(
   mode: OutputMode,
 ): Promise<void> {
   const args = buildCreateArgs(options, mode);
+
+  // Manifest mode: parse the file, collect uploads, upload, substitute
+  // URLs back into rows, then hand off to the normal validate/submit
+  // path. Kept inline rather than in a helper because it threads the
+  // `client` + `options['dry-run']` state that the rest of the command
+  // already has in scope.
+  if (options.manifest) {
+    const manifestPath = options.manifest as string;
+    validateSafePath(manifestPath, '--manifest');
+    if (!existsSync(manifestPath)) {
+      exitInvalidArg(`Manifest not found: ${manifestPath}`, mode);
+    }
+    let parsedManifest;
+    try {
+      parsedManifest = parseManifest(readFileSync(manifestPath, 'utf-8'));
+    } catch (err) {
+      exitInvalidArg((err as Error).message, mode);
+    }
+
+    if (options['dry-run']) {
+      const preview = {
+        totalRows: parsedManifest.rows.length,
+        uploadsPlanned: parsedManifest.uploads.length,
+        sampleRow: parsedManifest.rows[0],
+        uploadFields: Array.from(
+          new Set(parsedManifest.uploads.map((u) => u.fieldName)),
+        ),
+        templateId: args.templateId,
+        templateCode: args.templateCode ? `${args.templateCode.length} chars` : undefined,
+      };
+      console.log(
+        formatOutput(
+          preview,
+          `[dry-run] Would upload ${parsedManifest.uploads.length} image(s) and create batch with ${parsedManifest.rows.length} row(s)`,
+          mode,
+        ),
+      );
+      return;
+    }
+
+    // Resolve local paths against the manifest's directory so users can
+    // author catalog.json alongside their photos without CLI cwd gotchas.
+    const manifestAbs = resolvePath(manifestPath);
+    const baseDir = manifestAbs.slice(0, manifestAbs.lastIndexOf('/')) || '.';
+
+    const resolved = new Map<string, string>();
+    for (const pending of parsedManifest.uploads) {
+      const abs = isAbsolute(pending.localPath)
+        ? pending.localPath
+        : resolvePath(baseDir, pending.localPath);
+      validateSafePath(pending.localPath, `manifest[${pending.rowIndex}].${pending.fieldName}`);
+      if (!existsSync(abs)) {
+        exitInvalidArg(
+          `Manifest row ${pending.rowIndex} ${pending.fieldName}: file not found: ${abs}`,
+          mode,
+        );
+      }
+      let buf: Buffer;
+      try {
+        buf = readFileSync(abs);
+      } catch (err) {
+        exitInvalidArg(
+          `Manifest row ${pending.rowIndex} ${pending.fieldName}: read failed: ${(err as Error).message}`,
+          mode,
+        );
+      }
+      let mime: string;
+      try {
+        mime = mimeFromFilename(pending.localPath);
+      } catch (err) {
+        exitInvalidArg((err as Error).message, mode);
+      }
+      const { url } = await client!.uploadAsset(buf, basename(pending.localPath), mime);
+      resolved.set(`${pending.rowIndex}:${pending.fieldName}`, url);
+    }
+
+    applyUploadResults(parsedManifest.rows, parsedManifest.uploads, resolved);
+    args.rows = JSON.stringify(parsedManifest.rows);
+  }
+
   const rows = validateCreateArgs(args, mode);
 
   if (options['dry-run']) {

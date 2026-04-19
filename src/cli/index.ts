@@ -111,7 +111,7 @@ COMMANDS
   templates                Browse video templates
   preview <code|file>      Create a preview URL
   credits                  Check credit balance
-  batch create             Create a batch job (--rows / --rows-file + --template-id)
+  batch create             Create a batch job (--rows / --rows-file / --manifest + --template-id)
   batch start <jobId>      Start rendering a batch job (--poll → NDJSON stream)
   batch status <jobId>     Check batch status (--poll → NDJSON stream)
   batch list               List all batch jobs
@@ -145,6 +145,7 @@ EXAMPLES
   framlit schema framlit_generate_code
   echo '{"prompt":"test"}' | framlit generate --json -
   framlit batch create --rows-file rows.json --template-id flash-sale-burst
+  framlit batch create --manifest catalog.json --template-id spotlight-minimal
   framlit batch start job_abc --poll | jq -r 'select(.status=="completed")'
 
 AUTH
@@ -449,6 +450,7 @@ async function main(): Promise<void> {
       // batch
       rows: { type: 'string' },
       'rows-file': { type: 'string' },
+      manifest: { type: 'string' },
       'template-id': { type: 'string' },
       'template-code': { type: 'string' },
 

@@ -100,6 +100,11 @@ export interface VariationsResult {
   errors?: Array<{ style: string; error: string }>;
 }
 
+export interface UploadAssetResult {
+  url: string;
+  path: string;
+}
+
 export class FramlitClient {
   private apiKey: string;
   private baseUrl: string;
@@ -354,5 +359,49 @@ export class FramlitClient {
       method: 'POST',
       body: JSON.stringify({ variationId }),
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // Assets
+  // -------------------------------------------------------------------------
+
+  /**
+   * Upload a single image for use in batch manifests and agent flows.
+   * Skips the shared `request` helper because multipart bodies must NOT
+   * carry a `Content-Type: application/json` header — the runtime has to
+   * set its own multipart boundary.
+   */
+  async uploadAsset(
+    file: Buffer | Uint8Array,
+    filename: string,
+    mimeType: string,
+  ): Promise<UploadAssetResult> {
+    // Node 18+ ships a File implementation as a global alongside FormData.
+    // Constructing with [file] avoids an extra Blob allocation.
+    const form = new FormData();
+    const blob = new Blob([new Uint8Array(file)], { type: mimeType });
+    form.set('file', blob, filename);
+
+    const url = `${this.baseUrl}/api/mcp/assets/upload`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        'User-Agent': 'framlit-mcp/0.2.0',
+      },
+      body: form,
+    });
+
+    const data = (await response.json()) as {
+      data?: UploadAssetResult;
+      error?: string;
+      code?: string;
+    };
+
+    if (!response.ok || !data.data) {
+      throw new Error(data.error || `Upload failed with status ${response.status}`);
+    }
+
+    return data.data;
   }
 }
