@@ -38,6 +38,10 @@ import { cmdWhoami } from './commands/whoami.js';
 import { cmdLogout } from './commands/logout.js';
 import { cmdBatch } from './commands/batch.js';
 import { cmdVariations } from './commands/variations.js';
+import { cmdNarration } from './commands/narration.js';
+import { cmdCampaign } from './commands/campaign.js';
+import { cmdBrand } from './commands/brand.js';
+import { cmdShopify } from './commands/shopify.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -119,6 +123,16 @@ COMMANDS
   variations generate <projectId> --prompt "..."   Generate style variations
   variations list <projectId>                      List variations for a project
   variations apply <projectId> <variationId>       Apply a variation to project
+  narration generate "<brief>"   Full narrated-ad pipeline (Pro, 5 cr, ~90-180s)
+  narration cap                  Monthly narrated-ad cap status
+  narration stages <id>          Inspect script + audio + storyboard + code
+  campaign plan "<brief>"        Plan a multi-segment campaign (Pro, 10 cr)
+  campaign execute --plan-file   Fan out a CampaignPlan in parallel (Pro, 2 cr/segment)
+  campaign runs                  List recent campaign runs
+  campaign run <runId>           One run + variations + linked projects
+  brand get                      Get effective brand DNA
+  brand set --json '<payload>'   Upsert your brand profile
+  shopify products               List cached Shopify catalog (read-only)
   schema [tool-name]       Show tool schemas (agent discovery)
   mcp                      Start MCP server (for IDE integration)
   version                  Show version
@@ -507,6 +521,18 @@ async function main(): Promise<void> {
         break;
       case 'variations':
         await cmdVariations(rest, values, getApiKey);
+        break;
+      case 'narration':
+        await cmdNarration(rest, values, getApiKey);
+        break;
+      case 'campaign':
+        await cmdCampaign(rest, values, getApiKey);
+        break;
+      case 'brand':
+        await cmdBrand(rest, values, getApiKey);
+        break;
+      case 'shopify':
+        await cmdShopify(rest, values, getApiKey);
         break;
       case 'schema':
         cmdSchema(rest, values);

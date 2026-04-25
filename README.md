@@ -75,6 +75,24 @@ framlit variations generate <projectId> --prompt "..." --styles minimal,bold
 framlit variations list <projectId>
 framlit variations apply <projectId> <variationId>
 
+# Narrated ads — script + voiceover + word-synced visuals (Pro, v0.7+)
+framlit narration generate "Built for runners who hate stiff shoes"
+framlit narration cap                        # current month usage / cap
+framlit narration stages <projectId> --format md > narration.md
+
+# Campaigns — multi-segment plan + parallel fan-out (Pro, v0.7+)
+framlit campaign plan "Black Friday push for outerwear" --output json > plan.json
+framlit campaign execute --plan-file plan.json
+framlit campaign runs
+framlit campaign run <runId>
+
+# Brand DNA (v0.7+)
+framlit brand get
+framlit brand set --json-file brand.json     # Free: name + 3 colors only
+
+# Shopify (v0.7+, read-only — connect via web first)
+framlit shopify products --limit 10 --output json | jq
+
 # Discovery
 framlit templates --category social
 framlit credits

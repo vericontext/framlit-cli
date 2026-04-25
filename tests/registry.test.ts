@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { TOOL_REGISTRY, getToolByName, getToolNames, zodToJsonSchema } from '../src/core/registry';
 
 describe('Tool Registry', () => {
-  it('should have 11 tools registered', () => {
-    expect(TOOL_REGISTRY).toHaveLength(19);
+  it('should have all tools registered (v0.7 added 10 narration/campaign/brand/shopify tools)', () => {
+    expect(TOOL_REGISTRY).toHaveLength(29);
   });
 
   it('should have unique tool names', () => {
@@ -40,9 +40,14 @@ describe('Tool Registry', () => {
 
   it('getToolNames returns all names', () => {
     const names = getToolNames();
-    expect(names).toHaveLength(19);
+    expect(names).toHaveLength(29);
     expect(names).toContain('framlit_generate_code');
     expect(names).toContain('framlit_render_video');
+    // v0.7 additions
+    expect(names).toContain('framlit_generate_narrated_ad');
+    expect(names).toContain('framlit_campaign_plan');
+    expect(names).toContain('framlit_get_brand');
+    expect(names).toContain('framlit_list_shopify_products');
   });
 
   it('credit costs: code gen tools cost 1, most others cost 0', () => {

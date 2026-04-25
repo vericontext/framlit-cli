@@ -360,3 +360,179 @@ export async function handleApplyVariation(
     message: `Applied ${result.style} style to project ${result.projectId}. The project code has been updated.`,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Narrated ads
+// ---------------------------------------------------------------------------
+
+export async function handleGenerateNarratedAd(
+  client: FramlitClient,
+  args: {
+    brief: string;
+    productImageUrl?: string | null;
+    targetSeconds?: number;
+    voiceId?: string;
+    language?: 'en' | 'ko';
+    brandDnaId?: string | null;
+  },
+): Promise<HandlerResult> {
+  const result = await client.generateNarratedAd(args);
+  const seconds = result.audio?.durationMs
+    ? `${(result.audio.durationMs / 1000).toFixed(1)}s`
+    : '?s';
+  const sceneCount = result.storyboard?.scenes.length ?? 0;
+  const message = `Narrated ad ready (${result.creditsCharged} credits charged):
+  Project: ${result.projectId}
+  Audio:   ${seconds} (${result.audio?.wordCount ?? 0} words)
+  Scenes:  ${sceneCount} (storyboard-anchored, non-overlapping)
+  Code:    ${result.code.tsx.length} chars
+
+Open in editor: https://framlit.app/dashboard/editor?project=${result.projectId}`;
+  return { data: result, message };
+}
+
+export async function handleGetNarrationCap(
+  client: FramlitClient,
+): Promise<HandlerResult> {
+  const cap = await client.getNarrationCap();
+  const tier = cap.tier;
+  const status = cap.allowed ? 'OK' : 'BLOCKED';
+  const message = `Narration cap: ${cap.used}/${cap.cap} used this month (${cap.remaining} left) — ${status} on ${tier} plan`;
+  return { data: cap, message };
+}
+
+export async function handleGetNarratedAdStages(
+  client: FramlitClient,
+  args: { projectId: string; format?: 'json' | 'md' },
+): Promise<HandlerResult> {
+  const format = args.format ?? 'json';
+  const result = await client.getNarratedAdStages(args.projectId, format);
+  if (format === 'md') {
+    // Markdown bundle — print as-is.
+    return { data: { markdown: result }, message: result as string };
+  }
+  // Pre-narrowed by the format check above; this branch is the JSON shape.
+  const stages = result as unknown as Record<string, unknown>;
+  const present: string[] = [];
+  if (stages.script) present.push('script');
+  if (stages.audio) present.push('audio');
+  if (stages.storyboard) present.push('storyboard');
+  if (stages.code) present.push('code');
+  const message = `Stages for ${args.projectId}: ${present.length > 0 ? present.join(', ') : '(none)'}`;
+  return { data: stages, message };
+}
+
+// ---------------------------------------------------------------------------
+// Campaign Agent
+// ---------------------------------------------------------------------------
+
+export async function handleCampaignPlan(
+  client: FramlitClient,
+  args: { brief: string },
+): Promise<HandlerResult> {
+  const result = await client.campaignPlan(args);
+  const segLines = result.plan.segments
+    .map(
+      (s, i) =>
+        `  ${i + 1}. ${s.name} — ${s.audience} (${s.ad_count} ads, styles: ${s.recommended_styles.join('/')})`,
+    )
+    .join('\n');
+  const message = `Campaign plan: ${result.plan.campaign_name}
+${result.plan.summary}
+
+Segments:
+${segLines}
+
+Total ads: ${result.plan.total_ads} · Estimated credits: ${result.plan.estimated_credits}
+Charged for plan: ${result.creditsSpent} credits
+
+Pass the returned \`plan\` object to \`framlit campaign execute\` to fan out.`;
+  return { data: result, message };
+}
+
+export async function handleCampaignExecute(
+  client: FramlitClient,
+  args: { plan?: unknown },
+): Promise<HandlerResult> {
+  if (!args.plan) {
+    throw new Error('plan is required (pass the JSON returned from framlit_campaign_plan)');
+  }
+  // Server re-validates shape — we just need a typed cast here.
+  const result = await client.campaignExecute({
+    plan: args.plan as Parameters<FramlitClient['campaignExecute']>[0]['plan'],
+  });
+  const message = `Campaign run ${result.runId}: ${result.succeeded}/${result.total} segments succeeded (${result.creditsSpent} credits charged).`;
+  return { data: result, message };
+}
+
+export async function handleListCampaignRuns(
+  client: FramlitClient,
+): Promise<HandlerResult> {
+  const runs = await client.listCampaignRuns();
+  if (runs.length === 0) {
+    return { data: { runs: [] }, message: 'No campaign runs yet.' };
+  }
+  const lines = runs
+    .map(
+      (r) =>
+        `- ${r.id.slice(0, 8)} · ${r.status} · ${r.plan?.campaign_name ?? '(no name)'} · ${new Date(r.created_at).toLocaleDateString()}`,
+    )
+    .join('\n');
+  return { data: { runs }, message: `${runs.length} campaign run(s):\n\n${lines}` };
+}
+
+export async function handleGetCampaignRun(
+  client: FramlitClient,
+  args: { runId: string },
+): Promise<HandlerResult> {
+  const result = await client.getCampaignRun(args.runId);
+  const succeeded = result.variations.filter((v) => v.code).length;
+  const message = `Run ${args.runId.slice(0, 8)} (${result.run.status}): ${succeeded}/${result.variations.length} variations · ${result.projects.length} linked project(s)`;
+  return { data: result, message };
+}
+
+// ---------------------------------------------------------------------------
+// Brand DNA
+// ---------------------------------------------------------------------------
+
+export async function handleGetBrand(
+  client: FramlitClient,
+): Promise<HandlerResult> {
+  const result = await client.getBrand();
+  const b = result.brand;
+  const message = `Brand: ${b.brand_name ?? '(unnamed)'} · ${b.brand_colors.length} colors · ${b.tone_examples.length} tone examples · plan: ${result.plan.tier}`;
+  return { data: result, message };
+}
+
+export async function handleSetBrand(
+  client: FramlitClient,
+  args: Parameters<FramlitClient['setBrand']>[0],
+): Promise<HandlerResult> {
+  const result = await client.setBrand(args);
+  return { data: result, message: 'Brand profile updated.' };
+}
+
+// ---------------------------------------------------------------------------
+// Shopify
+// ---------------------------------------------------------------------------
+
+export async function handleListShopifyProducts(
+  client: FramlitClient,
+): Promise<HandlerResult> {
+  const products = await client.listShopifyProducts();
+  if (products.length === 0) {
+    return {
+      data: { products: [] },
+      message: 'No Shopify products synced. Connect a store at https://framlit.app/dashboard then run `framlit shopify products` again.',
+    };
+  }
+  const sample = products
+    .slice(0, 10)
+    .map((p) => `- ${p.title} ($${p.price_amount ?? '?'})`)
+    .join('\n');
+  const more = products.length > 10 ? `\n…and ${products.length - 10} more` : '';
+  return {
+    data: { products },
+    message: `${products.length} Shopify product(s):\n\n${sample}${more}`,
+  };
+}
