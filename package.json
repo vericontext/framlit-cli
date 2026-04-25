@@ -1,6 +1,6 @@
 {
   "name": "framlit",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Framlit CLI — generate Remotion videos from your terminal. Ships an MCP server for Claude/Cursor/VS Code on the side.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

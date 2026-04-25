@@ -21,7 +21,18 @@ export interface ToolEntry {
   schema: z.ZodObject<z.ZodRawShape>;
   handler: (client: FramlitClient, args: Record<string, unknown>) => Promise<HandlerResult>;
   credits: number | string;
-  category: 'generate' | 'project' | 'render' | 'template' | 'credits' | 'preview' | 'batch';
+  category:
+    | 'generate'
+    | 'project'
+    | 'render'
+    | 'template'
+    | 'credits'
+    | 'preview'
+    | 'batch'
+    | 'narration'
+    | 'campaign'
+    | 'brand'
+    | 'shopify';
 }
 
 // ---------------------------------------------------------------------------
@@ -219,6 +230,121 @@ Costs 1 credit per variation. Free plan: 2 max, Pro: 5, Team: 10.`,
     handler: (c, a) => handlers.handleApplyVariation(c, a as z.infer<typeof schemas.applyVariationSchema>),
     credits: 0,
     category: 'generate',
+  },
+
+  // Narrated ads (HyperFrame-style 3-stage pipeline)
+  {
+    name: 'framlit_generate_narrated_ad',
+    description: `Generate a full narrated ad (script + voiceover + word-synced visuals).
+Pro-only. Costs 5 credits + counts against the monthly cap (50/month on Pro).
+Pipeline: Haiku writes the script, ElevenLabs records voice with word-level alignment, a deterministic storyboard step computes non-overlapping scene boundaries, Sonnet generates Remotion code anchoring reveals to spoken words. ~90-180s wall time.
+Returns the new projectId, audio URL, storyboard scenes, and generated TSX.`,
+    schema: schemas.generateNarratedAdSchema,
+    handler: (c, a) =>
+      handlers.handleGenerateNarratedAd(
+        c,
+        a as z.infer<typeof schemas.generateNarratedAdSchema>,
+      ),
+    credits: 5,
+    category: 'narration',
+  },
+  {
+    name: 'framlit_get_narration_cap',
+    description:
+      'Get current month narrated-ad usage and remaining cap. Free, instant — useful as a pre-flight before spending credits.',
+    schema: schemas.narrationCapSchema,
+    handler: (c) => handlers.handleGetNarrationCap(c),
+    credits: 0,
+    category: 'narration',
+  },
+  {
+    name: 'framlit_get_narrated_ad_stages',
+    description:
+      'Inspect the script + audio + storyboard + code stage outputs of a narrated-ad project. JSON by default; pass format="md" for the markdown bundle.',
+    schema: schemas.narratedAdStagesSchema,
+    handler: (c, a) =>
+      handlers.handleGetNarratedAdStages(
+        c,
+        a as z.infer<typeof schemas.narratedAdStagesSchema>,
+      ),
+    credits: 0,
+    category: 'narration',
+  },
+
+  // Campaign Agent (multi-segment plan + parallel fan-out)
+  {
+    name: 'framlit_campaign_plan',
+    description: `Run the Campaign Agent to plan a multi-segment campaign from a one-line brief.
+Pro-only. Costs 10 credits.
+Returns a structured CampaignPlan with audience segments, hooks, recommended styles, and ad counts. Pass the plan to framlit_campaign_execute to fan out to actual videos.`,
+    schema: schemas.campaignPlanSchema,
+    handler: (c, a) =>
+      handlers.handleCampaignPlan(c, a as z.infer<typeof schemas.campaignPlanSchema>),
+    credits: 10,
+    category: 'campaign',
+  },
+  {
+    name: 'framlit_campaign_execute',
+    description: `Execute a CampaignPlan — fans out to one Sonnet generation per segment in parallel. Pro-only. Costs 2 credits per segment (failed segments are not charged). Persists a campaign_run + per-segment variations. ~20-40s wall time for 2-3 segments.`,
+    schema: schemas.campaignExecuteSchema,
+    handler: (c, a) =>
+      handlers.handleCampaignExecute(
+        c,
+        a as z.infer<typeof schemas.campaignExecuteSchema>,
+      ),
+    credits: '2/segment',
+    category: 'campaign',
+  },
+  {
+    name: 'framlit_list_campaign_runs',
+    description: 'List recent campaign runs (capped at 50). Free.',
+    schema: schemas.listCampaignRunsSchema,
+    handler: (c) => handlers.handleListCampaignRuns(c),
+    credits: 0,
+    category: 'campaign',
+  },
+  {
+    name: 'framlit_get_campaign_run',
+    description:
+      'Get one campaign run + its per-segment variations + linked projects. Free. Use to poll execution status or pick up generated code per segment.',
+    schema: schemas.getCampaignRunSchema,
+    handler: (c, a) =>
+      handlers.handleGetCampaignRun(c, a as z.infer<typeof schemas.getCampaignRunSchema>),
+    credits: 0,
+    category: 'campaign',
+  },
+
+  // Brand DNA
+  {
+    name: 'framlit_get_brand',
+    description:
+      'Get the effective brand profile (workspace brand wins over user-level). Free. Use to build brand-aware codegen prompts before calling framlit_generate_code.',
+    schema: schemas.getBrandSchema,
+    handler: (c) => handlers.handleGetBrand(c),
+    credits: 0,
+    category: 'brand',
+  },
+  {
+    name: 'framlit_set_brand',
+    description: `Upsert the user's personal brand profile (colors, fonts, tone, do-nots, archetypes).
+Free tier: brand_name + fonts + up to 3 colors + logo only.
+Pro tier: everything including tone_examples, do_nots, past_ad_urls, product_archetypes.`,
+    schema: schemas.setBrandSchema,
+    handler: (c, a) =>
+      handlers.handleSetBrand(c, a as z.infer<typeof schemas.setBrandSchema>),
+    credits: 0,
+    category: 'brand',
+  },
+
+  // Shopify
+  {
+    name: 'framlit_list_shopify_products',
+    description:
+      'List the user\'s cached Shopify product catalog (up to 500 rows). Read-only — the OAuth connect flow stays browser-only. Pair with batch create to generate ads from real product data.',
+    schema: schemas.listShopifyProductsSchema,
+    handler: (c) => handlers.handleListShopifyProducts(c),
+    credits: 0,
+    category: 'shopify',
   },
 ];
 

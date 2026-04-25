@@ -125,7 +125,7 @@ export class FramlitClient {
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',
-        'User-Agent': 'framlit-mcp/0.2.0',
+        'User-Agent': USER_AGENT,
         ...options.headers,
       },
     });
@@ -387,7 +387,7 @@ export class FramlitClient {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
-        'User-Agent': 'framlit-mcp/0.2.0',
+        'User-Agent': USER_AGENT,
       },
       body: form,
     });
@@ -404,4 +404,315 @@ export class FramlitClient {
 
     return data.data;
   }
+
+  // -------------------------------------------------------------------------
+  // Narrated ads (HyperFrame-style 3-stage pipeline: script → audio → code)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Generate a full narrated ad. Server runs script (Haiku) + audio
+   * (ElevenLabs with-timestamps) + storyboard (deterministic) + code
+   * (Sonnet w/ extended thinking) and returns the final state. The
+   * web variant streams SSE events; the MCP proxy buffers them so the
+   * client gets a single response. ~90-180s wall time.
+   *
+   * Pro-only. Costs CREDIT_COSTS.narratedAdGeneration (5) + counts
+   * against the monthly cap.
+   */
+  async generateNarratedAd(params: {
+    brief: string;
+    productImageUrl?: string | null;
+    targetSeconds?: number;
+    voiceId?: string;
+    language?: 'en' | 'ko';
+    brandDnaId?: string | null;
+  }): Promise<NarratedAdResult> {
+    return this.request<NarratedAdResult>('/narrated-ad/generate', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  /**
+   * Monthly narrated-ad cap status. Free, instant. Useful as a
+   * pre-flight before spending credits.
+   */
+  async getNarrationCap(): Promise<NarrationCapStatus> {
+    return this.request<NarrationCapStatus>('/narrated-ad/cap');
+  }
+
+  /**
+   * Stage outputs (script + audio + storyboard + code) for a narrated
+   * ad project. JSON by default; pass format='md' for the markdown
+   * bundle (returned as raw markdown, not JSON).
+   */
+  async getNarratedAdStages(
+    projectId: string,
+    format: 'json' | 'md' = 'json',
+  ): Promise<NarratedAdStages | string> {
+    if (format === 'md') {
+      // Markdown export bypasses the JSON wrapper.
+      const url = `${this.baseUrl}/api/mcp/narrated-ad/stages/${projectId}?format=md`;
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'User-Agent': USER_AGENT,
+        },
+      });
+      if (!res.ok) {
+        throw new Error(`Markdown export failed: ${res.status}`);
+      }
+      return await res.text();
+    }
+    const result = await this.request<{ stages: NarratedAdStages }>(
+      `/narrated-ad/stages/${projectId}`,
+    );
+    return result.stages;
+  }
+
+  // -------------------------------------------------------------------------
+  // Campaign Agent (multi-segment plan + parallel fan-out)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Run the agentic loop (read-only tools: brand / products / styles)
+   * to produce a structured CampaignPlan from a one-line brief.
+   * Pro-only. Costs CREDIT_COSTS.campaignAgentPlan (10).
+   */
+  async campaignPlan(params: { brief: string }): Promise<{ plan: CampaignPlan; creditsSpent: number }> {
+    return this.request<{ plan: CampaignPlan; creditsSpent: number }>(
+      '/campaign/plan',
+      { method: 'POST', body: JSON.stringify(params) },
+    );
+  }
+
+  /**
+   * Execute a CampaignPlan — fans out to one Sonnet generation per
+   * segment in parallel, persists run + variations, returns runId +
+   * results. Costs N segments × CREDIT_COSTS.campaignAgentExecutePerSegment.
+   * Failed segments are NOT charged.
+   */
+  async campaignExecute(params: { plan: CampaignPlan }): Promise<CampaignExecuteResult> {
+    return this.request<CampaignExecuteResult>('/campaign/execute', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  /** List recent campaign runs (capped 50). Free. */
+  async listCampaignRuns(): Promise<CampaignRun[]> {
+    const result = await this.request<{ runs: CampaignRun[] }>('/campaign/runs');
+    return result.runs;
+  }
+
+  /** Get one campaign run + its variations + linked projects. Free. */
+  async getCampaignRun(runId: string): Promise<{
+    run: CampaignRun;
+    variations: CampaignVariation[];
+    projects: Array<{ id: string; title: string; created_at: string; video_format: string }>;
+  }> {
+    return this.request(`/campaign/runs/${runId}`);
+  }
+
+  // -------------------------------------------------------------------------
+  // Brand DNA
+  // -------------------------------------------------------------------------
+
+  /**
+   * Get the effective brand for the authenticated user (workspace brand
+   * takes precedence over user-level). Free.
+   */
+  async getBrand(): Promise<BrandResult> {
+    return this.request<BrandResult>('/brand');
+  }
+
+  /**
+   * Upsert the user's personal brand profile. Free-tier caps are
+   * enforced server-side (max 3 colors, no tone/do-nots/past-ads/
+   * archetypes). Pro for everything.
+   */
+  async setBrand(payload: BrandPayload): Promise<{ brand: unknown }> {
+    return this.request<{ brand: unknown }>('/brand', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Shopify
+  // -------------------------------------------------------------------------
+
+  /**
+   * Cached Shopify product catalog (up to 500 rows) for the caller's
+   * connected store. Read-only. The OAuth connect flow remains
+   * browser-only; this endpoint just reads what's already synced.
+   */
+  async listShopifyProducts(): Promise<ShopifyProduct[]> {
+    const result = await this.request<{ products: ShopifyProduct[] }>(
+      '/shopify/products',
+    );
+    return result.products;
+  }
+}
+
+const USER_AGENT = 'framlit-mcp/0.7.0';
+
+// ---------------------------------------------------------------------------
+// Narrated ad / Campaign / Brand / Shopify types
+// ---------------------------------------------------------------------------
+
+export interface NarratedAdResult {
+  projectId: string;
+  script: {
+    text: string;
+    beats: Array<{ sentenceIndex: number; intent: string; visualText?: string }>;
+    estimatedSeconds: number;
+    language: 'en' | 'ko';
+  } | null;
+  audio: {
+    audioUrl: string;
+    durationMs: number;
+    wordCount: number;
+    voiceId: string;
+  } | null;
+  storyboard: {
+    scenes: Array<{
+      sentenceIndex: number;
+      intent: string;
+      visualText?: string;
+      anchorWord: string;
+      startMs: number;
+      endMs: number;
+    }>;
+    audioDurationMs: number;
+    tailMs: number;
+  } | null;
+  code: { tsx: string };
+  creditsCharged: number;
+}
+
+export interface NarrationCapStatus {
+  cap: number;
+  used: number;
+  remaining: number;
+  allowed: boolean;
+  tier: 'free' | 'pro' | 'team';
+}
+
+export interface NarratedAdStages {
+  script:
+    | (Record<string, unknown> & { _meta?: { costUsd?: number; durationMs?: number } })
+    | null;
+  audio:
+    | (Record<string, unknown> & { _meta?: { costUsd?: number; durationMs?: number } })
+    | null;
+  storyboard:
+    | (Record<string, unknown> & { _meta?: { costUsd?: number; durationMs?: number } })
+    | null;
+  code:
+    | (Record<string, unknown> & { _meta?: { costUsd?: number; durationMs?: number } })
+    | null;
+}
+
+export interface CampaignPlanSegment {
+  name: string;
+  audience: string;
+  hook: string;
+  recommended_styles: string[];
+  ad_count: number;
+  example_headlines?: string[];
+}
+
+export interface CampaignPlan {
+  campaign_name: string;
+  summary: string;
+  segments: CampaignPlanSegment[];
+  total_ads: number;
+  estimated_credits: number;
+  requires_from_user: string[];
+  rationale: string;
+}
+
+export interface CampaignVariation {
+  segment_name: string;
+  style: string;
+  code: string | null;
+  error: string | null;
+  model?: string;
+}
+
+export interface CampaignExecuteResult {
+  runId: string;
+  variations: CampaignVariation[];
+  creditsSpent: number;
+  succeeded: number;
+  total: number;
+}
+
+export interface CampaignRun {
+  id: string;
+  plan: CampaignPlan;
+  status: string;
+  total_credits_spent: number;
+  error: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface BrandColor {
+  name: string;
+  hex: string;
+  role?: string;
+}
+
+export interface BrandFont {
+  heading: string | null;
+  body: string | null;
+}
+
+export interface BrandToneExample {
+  type: 'headline' | 'body' | 'cta';
+  content: string;
+}
+
+export interface BrandPayload {
+  brand_name?: string | null;
+  logo_url?: string | null;
+  brand_colors?: BrandColor[];
+  brand_fonts?: BrandFont;
+  tone_examples?: BrandToneExample[];
+  do_nots?: string[];
+  past_ad_urls?: string[];
+  product_archetypes?: string[];
+}
+
+export interface BrandResult {
+  brand: {
+    source: string | null;
+    brand_name: string | null;
+    logo_url: string | null;
+    brand_colors: BrandColor[];
+    brand_fonts: BrandFont;
+    tone_examples: BrandToneExample[];
+    do_nots: string[];
+    past_ad_urls: string[];
+    product_archetypes: string[];
+  };
+  plan: {
+    tier: string;
+    brandVaultEnabled: boolean;
+    brandLearningEnabled: boolean;
+    freeColorLimit: number;
+  };
+}
+
+export interface ShopifyProduct {
+  shopify_product_id: string;
+  title: string;
+  handle: string;
+  description: string | null;
+  price_amount: number | null;
+  featured_image_url: string | null;
+  vendor: string | null;
+  product_type: string | null;
 }

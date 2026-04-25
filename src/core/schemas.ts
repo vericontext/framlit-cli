@@ -120,3 +120,83 @@ export const applyVariationSchema = z.object({
   projectId: z.string().describe('The project ID.'),
   variationId: z.string().describe('The variation ID to apply.'),
 });
+
+// ---------------------------------------------------------------------------
+// Narrated ads (HyperFrame-style 3-stage pipeline)
+// ---------------------------------------------------------------------------
+
+export const generateNarratedAdSchema = z.object({
+  brief: z.string().min(5).describe('Ad brief — what the narration should say or be about. Min 5 chars.'),
+  productImageUrl: z.string().url().nullish().describe('Optional product image the codegen stage can reference.'),
+  targetSeconds: z.number().int().min(8).max(60).optional().describe('Target spoken duration in seconds. Default 20. Clamped to 8–60.'),
+  voiceId: z.string().optional().describe('ElevenLabs voice ID. Defaults to Rachel. Use `framlit narration voices` for the preset list.'),
+  language: z.enum(['en', 'ko']).optional().describe('Spoken language. "en" or "ko". Default "en".'),
+  brandDnaId: z.string().nullish().describe('Reserved — workspace-scoped brand DNA selector.'),
+});
+
+export const narrationCapSchema = z.object({});
+
+export const narratedAdStagesSchema = z.object({
+  projectId: z.string().describe('The narrated-ad project ID returned from `framlit narrated`.'),
+  format: z.enum(['json', 'md']).optional().describe('Output format. "json" (default) or "md" for the markdown bundle.'),
+});
+
+// ---------------------------------------------------------------------------
+// Campaign Agent (multi-segment plan + parallel fan-out)
+// ---------------------------------------------------------------------------
+
+export const campaignPlanSchema = z.object({
+  brief: z.string().min(1).max(400).describe('One-line campaign brief, e.g. "Black Friday push for outerwear". Max 400 chars.'),
+});
+
+export const campaignExecuteSchema = z.object({
+  plan: z.unknown().describe('CampaignPlan JSON returned from `framlit campaign plan`. Pass through verbatim.'),
+});
+
+export const listCampaignRunsSchema = z.object({});
+
+export const getCampaignRunSchema = z.object({
+  runId: z.string().describe('The campaign run ID from `framlit campaign runs`.'),
+});
+
+// ---------------------------------------------------------------------------
+// Brand DNA
+// ---------------------------------------------------------------------------
+
+export const getBrandSchema = z.object({});
+
+export const setBrandSchema = z.object({
+  brand_name: z.string().nullish(),
+  logo_url: z.string().url().nullish(),
+  brand_colors: z
+    .array(
+      z.object({
+        name: z.string(),
+        hex: z.string().regex(/^#[0-9a-fA-F]{3,8}$/),
+        role: z.string().optional(),
+      }),
+    )
+    .optional()
+    .describe('Brand colors. Free tier capped at 3.'),
+  brand_fonts: z
+    .object({ heading: z.string().nullable(), body: z.string().nullable() })
+    .optional(),
+  tone_examples: z
+    .array(
+      z.object({
+        type: z.enum(['headline', 'body', 'cta']),
+        content: z.string(),
+      }),
+    )
+    .optional()
+    .describe('Pro-only.'),
+  do_nots: z.array(z.string()).optional().describe('Pro-only.'),
+  past_ad_urls: z.array(z.string().url()).optional().describe('Pro-only.'),
+  product_archetypes: z.array(z.string()).optional().describe('Pro-only.'),
+});
+
+// ---------------------------------------------------------------------------
+// Shopify
+// ---------------------------------------------------------------------------
+
+export const listShopifyProductsSchema = z.object({});
