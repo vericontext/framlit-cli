@@ -6,6 +6,7 @@
  */
 
 import type { ErrorCode } from './exit-codes.js';
+import { applyFieldMask, parseFieldMask } from './field-mask.js';
 
 export type OutputMode = 'text' | 'json';
 
@@ -17,9 +18,31 @@ export function detectOutputMode(explicit?: string): OutputMode {
   return 'text';
 }
 
-export function formatOutput(data: unknown, message: string, mode: OutputMode): string {
+export interface FormatOptions {
+  /** Comma-separated dot-paths — applied to data before serialization. JSON mode only. */
+  fields?: string;
+}
+
+// Process-level defaults — set once in main() so individual commands don't
+// have to plumb --fields through every formatOutput call site. CLI is a
+// single-shot process per invocation, so a module-level singleton is safe.
+let defaults: FormatOptions = {};
+
+export function setOutputDefaults(opts: FormatOptions): void {
+  defaults = { ...defaults, ...opts };
+}
+
+export function formatOutput(
+  data: unknown,
+  message: string,
+  mode: OutputMode,
+  options: FormatOptions = {},
+): string {
   if (mode === 'json') {
-    return JSON.stringify(data, null, 2);
+    const fields = options.fields ?? defaults.fields;
+    const paths = parseFieldMask(fields);
+    const projected = paths ? applyFieldMask(data, paths) : data;
+    return JSON.stringify(projected, null, 2);
   }
   return message;
 }

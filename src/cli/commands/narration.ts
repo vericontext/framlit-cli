@@ -3,6 +3,9 @@
  *
  * Subcommands:
  *   framlit narration generate "<brief>" [--target 20] [--voice rachel] [--lang en|ko]
+ *   framlit narration generate --json '{"brief":"...","targetSeconds":20}'
+ *   framlit narration generate --json -          # stdin
+ *   framlit narration generate --json-file <path>
  *   framlit narration cap
  *   framlit narration stages <projectId> [--format json|md]
  *
@@ -10,17 +13,34 @@
  * — be patient or pipe stderr to a log.
  */
 
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { FramlitClient } from '../../api/client.js';
 import * as handlers from '../../core/handlers.js';
 import { detectOutputMode, formatOutput, formatError } from '../output.js';
 import { EXIT } from '../exit-codes.js';
-import { ValidationError, validateResourceId, validateTextInput } from '../validation.js';
+import {
+  ValidationError,
+  sanitizeUntrustedText,
+  validateResourceId,
+  validateSafePath,
+  validateTextInput,
+} from '../validation.js';
 
 
 function exitInvalidArg(message: string, output?: string): never {
   console.error(formatError(message, detectOutputMode(output), 'INVALID_ARGUMENT'));
   process.exit(EXIT.INVALID_ARGS);
+}
+
+function readJsonInput(value: string): string {
+  return value === '-' ? readFileSync(0, 'utf-8') : value;
+}
+
+interface NarrationGeneratePayload {
+  brief: string;
+  targetSeconds?: number;
+  voiceId?: string;
+  language?: 'en' | 'ko';
 }
 
 export async function cmdNarration(
@@ -37,25 +57,83 @@ export async function cmdNarration(
 
   switch (sub) {
     case 'generate': {
-      const brief = rest[0];
-      if (!brief) exitInvalidArg('Brief required: framlit narration generate "<brief>"', outputFlag);
-      validateTextInput(brief, 'brief', 600);
-      if (brief.trim().length < 5) {
-        exitInvalidArg('brief must be at least 5 characters', outputFlag);
+      // Build payload either from --json (preferred for agents) or from
+      // bespoke flags (preferred for humans). --json overrides flags entirely.
+      let payload: NarrationGeneratePayload;
+      let json: string | undefined;
+      if (options['json-file']) {
+        const file = String(options['json-file']);
+        validateSafePath(file, '--json-file');
+        json = readFileSync(file, 'utf-8');
+      } else if (options.json) {
+        json = readJsonInput(String(options.json));
       }
 
-      const target = options.target ? Number(options.target) : undefined;
-      if (target !== undefined && (Number.isNaN(target) || target < 8 || target > 60)) {
-        exitInvalidArg('--target must be a number between 8 and 60', outputFlag);
+      if (json) {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(json);
+        } catch (err) {
+          exitInvalidArg(
+            `Could not parse JSON payload: ${err instanceof Error ? err.message : 'unknown'}`,
+            outputFlag,
+          );
+        }
+        if (!parsed || typeof parsed !== 'object') {
+          exitInvalidArg('JSON payload must be an object', outputFlag);
+        }
+        payload = parsed as NarrationGeneratePayload;
+      } else {
+        const brief = rest[0];
+        if (!brief) {
+          exitInvalidArg(
+            'Brief required: framlit narration generate "<brief>" (or pass --json)',
+            outputFlag,
+          );
+        }
+        const target = options.target ? Number(options.target) : undefined;
+        if (target !== undefined && Number.isNaN(target)) {
+          exitInvalidArg('--target must be a number', outputFlag);
+        }
+        payload = {
+          brief,
+          targetSeconds: target,
+          voiceId: options.voice as string | undefined,
+          language: options.lang as 'en' | 'ko' | undefined,
+        };
       }
-      const voice = options.voice as string | undefined;
-      const lang = options.lang as string | undefined;
-      if (lang && lang !== 'en' && lang !== 'ko') {
-        exitInvalidArg('--lang must be "en" or "ko"', outputFlag);
+
+      // Validate the resolved payload regardless of input source — agents
+      // sending malformed --json get the same errors as humans.
+      if (typeof payload.brief !== 'string') {
+        exitInvalidArg('brief is required and must be a string', outputFlag);
+      }
+      // Opt-in defense for agents passing untrusted text (web-scraped briefs,
+      // user prompts laundered through other tools). Surfaces what was stripped.
+      if (options.sanitize) {
+        const { value, removed } = sanitizeUntrustedText(payload.brief);
+        if (removed.length) {
+          process.stderr.write(
+            `[sanitize] stripped ${removed.length} suspicious line(s) from brief\n`,
+          );
+        }
+        payload.brief = value;
+      }
+      validateTextInput(payload.brief, 'brief', 600);
+      if (payload.brief.trim().length < 5) {
+        exitInvalidArg('brief must be at least 5 characters', outputFlag);
+      }
+      if (payload.targetSeconds !== undefined) {
+        if (typeof payload.targetSeconds !== 'number' || Number.isNaN(payload.targetSeconds)
+          || payload.targetSeconds < 8 || payload.targetSeconds > 60) {
+          exitInvalidArg('targetSeconds must be a number between 8 and 60', outputFlag);
+        }
+      }
+      if (payload.language !== undefined && payload.language !== 'en' && payload.language !== 'ko') {
+        exitInvalidArg('language must be "en" or "ko"', outputFlag);
       }
 
       if (options['dry-run']) {
-        const payload = { brief, targetSeconds: target, voiceId: voice, language: lang };
         console.log(formatOutput(payload, `[dry-run] would POST narrated-ad ${JSON.stringify(payload)}`, mode));
         return;
       }
@@ -64,12 +142,7 @@ export async function cmdNarration(
       if (mode === 'text') {
         process.stderr.write('Writing script... (this takes ~90-180s)\n');
       }
-      const result = await handlers.handleGenerateNarratedAd(client, {
-        brief,
-        targetSeconds: target,
-        voiceId: voice,
-        language: (lang as 'en' | 'ko' | undefined),
-      });
+      const result = await handlers.handleGenerateNarratedAd(client, payload);
       console.log(formatOutput(result.data, result.message, mode));
       return;
     }

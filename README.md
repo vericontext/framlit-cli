@@ -108,9 +108,27 @@ Run `framlit help` for the full reference.
 |---|---|
 | `--output json\|text` | Force output mode. Auto-JSON when stdout is piped. |
 | `--json '<payload>'` or `--json -` (stdin) | Raw JSON-RPC-style input — bypasses bespoke flags, maps 1:1 to tool schema. |
+| `--json-file <path>` | Read the same JSON payload from disk. Path-traversal validated. |
+| `--fields "data.id,data.name"` | Client-side projection. Shrinks the JSON response to just these dot-paths so big list/get responses don't blow up your context. Supports `items[].id` array projection. |
+| `--sanitize` | Strip known prompt-injection markers from text inputs (`brief`, `prompt`, `instruction`) before dispatching. Reports stripped lines on stderr. Opt-in. |
 | `--dry-run` | Validate + preview a mutating call without executing. Works without an API key. |
 | `--poll` | NDJSON status stream until terminal state. On `render status`, `batch start`, `batch status`. |
 | `framlit schema [tool]` | Runtime JSON Schema introspection for agents. |
+
+For agents loading the CLI as a tool, ship these alongside your harness:
+
+- [`SKILL.md`](./SKILL.md) — invariants and happy-path patterns
+- [`CONTEXT.md`](./CONTEXT.md) — vocabulary, services, security model
+- [`AGENTS.md`](./AGENTS.md) — README-for-AI entry point
+
+The MCP server can be subset to keep tool count small:
+
+```bash
+# Only load narration + campaign + brand tools (7/29) — saves prompt tokens
+npx framlit-mcp --services narration,campaign,brand
+# or via env:
+FRAMLIT_MCP_SERVICES=batch,brand npx framlit-mcp
+```
 
 Errors go to stderr as JSON when output is JSON:
 

@@ -3,6 +3,7 @@
  *
  * Subcommands:
  *   framlit campaign plan "<brief>"
+ *   framlit campaign plan --json '{"brief":"..."}' | --json - | --json-file <path>
  *   framlit campaign execute (--plan-file <path> | --plan '<json>' | -)
  *   framlit campaign runs
  *   framlit campaign run <runId>
@@ -18,7 +19,13 @@ import { FramlitClient, type CampaignPlan } from '../../api/client.js';
 import * as handlers from '../../core/handlers.js';
 import { detectOutputMode, formatOutput, formatError } from '../output.js';
 import { EXIT } from '../exit-codes.js';
-import { ValidationError, validateResourceId, validateTextInput, validateSafePath } from '../validation.js';
+import {
+  ValidationError,
+  sanitizeUntrustedText,
+  validateResourceId,
+  validateTextInput,
+  validateSafePath,
+} from '../validation.js';
 
 function exitInvalidArg(message: string, output?: string): never {
   console.error(formatError(message, detectOutputMode(output), 'INVALID_ARGUMENT'));
@@ -43,9 +50,43 @@ export async function cmdCampaign(
 
   switch (sub) {
     case 'plan': {
-      const brief = rest[0];
-      if (!brief) exitInvalidArg('Brief required: framlit campaign plan "<brief>"', outputFlag);
-      validateTextInput(brief, 'brief', 400);
+      // --json overrides positional brief — agents prefer the JSON path so
+      // they only have to learn one tool surface.
+      let brief: string | undefined;
+      let json: string | undefined;
+      if (options['json-file']) {
+        const file = String(options['json-file']);
+        validateSafePath(file, '--json-file');
+        json = readFileSync(file, 'utf-8');
+      } else if (options.json) {
+        json = readJsonInput(String(options.json));
+      }
+
+      if (json) {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(json);
+        } catch (err) {
+          exitInvalidArg(`Could not parse JSON payload: ${err instanceof Error ? err.message : 'unknown'}`, outputFlag);
+        }
+        if (!parsed || typeof parsed !== 'object' || typeof (parsed as { brief?: unknown }).brief !== 'string') {
+          exitInvalidArg('JSON payload must be {"brief": "<string>"}', outputFlag);
+        }
+        brief = (parsed as { brief: string }).brief;
+      } else {
+        brief = rest[0];
+        if (!brief) exitInvalidArg('Brief required: framlit campaign plan "<brief>" (or pass --json)', outputFlag);
+      }
+      if (options.sanitize) {
+        const { value, removed } = sanitizeUntrustedText(brief!);
+        if (removed.length) {
+          process.stderr.write(
+            `[sanitize] stripped ${removed.length} suspicious line(s) from brief\n`,
+          );
+        }
+        brief = value;
+      }
+      validateTextInput(brief!, 'brief', 400);
 
       if (options['dry-run']) {
         console.log(formatOutput({ brief }, `[dry-run] would POST campaign/plan with brief: ${brief}`, mode));
