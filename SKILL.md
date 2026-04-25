@@ -5,6 +5,10 @@ description: Rules and patterns for using the framlit CLI / MCP server to genera
 
 # framlit Skill
 
+> **Naming**: `framlit` (the npm package) is the CLI + MCP server. The web
+> app at https://framlit.app is a separate closed product the CLI talks to
+> via `/api/mcp/*`. Same convention as `aws`, `gh`, `vercel`.
+
 framlit is an AI video-ad generator for e-commerce. You'll use it to turn a
 prompt or product catalog into MP4s rendered on AWS Lambda. Same package
 ships both the `framlit` CLI and `framlit-mcp` server — pick whichever

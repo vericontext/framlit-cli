@@ -9,7 +9,9 @@
 
 A command-line + MCP interface to [framlit.app](https://framlit.app), an
 AI-powered Remotion video generator for e-commerce ads (TikTok / Reels /
-YouTube). Same install ships two binaries from the same package:
+YouTube). Naming convention follows `aws` / `gh` / `vercel` — `framlit`
+the npm package IS the CLI tool; the web app it talks to is a separate
+closed product. Same install ships two binaries from the same package:
 
 - `framlit` — interactive + scriptable CLI
 - `framlit-mcp` — MCP server (stdio JSON-RPC) for IDE agents
