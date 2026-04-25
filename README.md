@@ -1,5 +1,11 @@
 # framlit
 
+> **`framlit`** is the **command-line + MCP server** for the Framlit AI video
+> ad platform (web app at https://framlit.app). Same naming convention as
+> `aws` / `gh` / `vercel` — the brand IS the CLI tool. The web app is a
+> separate, closed product; this npm package only talks to its public
+> `/api/mcp/*` endpoints. MIT licensed, PRs welcome.
+
 CLI for [Framlit](https://framlit.app) — AI-powered video generation. Generate
 Remotion videos from your terminal, render via AWS Lambda, batch-personalize
 hundreds at a time. Ships an MCP server for Claude / Cursor / VS Code on the
