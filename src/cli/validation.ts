@@ -75,3 +75,37 @@ export function validateTextInput(value: string, fieldName: string, maxLength = 
     );
   }
 }
+
+// Common prompt-injection markers. Conservative — these are known patterns,
+// not a complete defense. Matches case-insensitively, line-anchored where
+// it makes sense to avoid false positives in legitimate prose.
+const INJECTION_PATTERNS: ReadonlyArray<RegExp> = [
+  /\bignore\s+(?:all|any|the|previous|prior|above|earlier)\s+instructions?\b/i,
+  /\bdisregard\s+(?:all|any|the|previous|prior|above|earlier)\s+instructions?\b/i,
+  /<\/?(?:system|instructions?|user|assistant|prompt)>/i,
+  /^\s*(?:system|user|assistant|human)\s*:\s*/im,
+  /\[\[\s*(?:system|prompt|instructions?)\s*\]\]/i,
+];
+
+/**
+ * Strip lines matching known prompt-injection patterns from untrusted text.
+ * Opt-in via `--sanitize` — agents should call this before passing
+ * user-supplied / web-scraped strings into prompts (`brief`, `prompt`,
+ * `instruction`).
+ *
+ * Returns `{ value, removed }` so the caller can warn the user when
+ * something was actually stripped.
+ */
+export function sanitizeUntrustedText(input: string): { value: string; removed: string[] } {
+  const removed: string[] = [];
+  const cleanedLines: string[] = [];
+  for (const line of input.split(/\r?\n/)) {
+    const matched = INJECTION_PATTERNS.some((re) => re.test(line));
+    if (matched) {
+      removed.push(line.trim());
+    } else {
+      cleanedLines.push(line);
+    }
+  }
+  return { value: cleanedLines.join('\n').trim(), removed };
+}

@@ -28,10 +28,10 @@ import { readFileSync, existsSync } from 'node:fs';
 import { FramlitClient } from '../api/client.js';
 import { TOOL_REGISTRY, getToolByName, zodToJsonSchema } from '../core/registry.js';
 import * as handlers from '../core/handlers.js';
-import { detectOutputMode, formatOutput, formatError, writeNdjsonLine } from './output.js';
+import { detectOutputMode, formatOutput, formatError, writeNdjsonLine, setOutputDefaults } from './output.js';
 import { EXIT, exitCodeForError } from './exit-codes.js';
 import type { ErrorCode } from './exit-codes.js';
-import { ValidationError, validateResourceId, validateTextInput, validateSafePath } from './validation.js';
+import { ValidationError, sanitizeUntrustedText, validateResourceId, validateTextInput, validateSafePath } from './validation.js';
 import { loadConfig } from './config.js';
 import { cmdLogin } from './commands/login.js';
 import { cmdWhoami } from './commands/whoami.js';
@@ -200,6 +200,13 @@ async function cmdGenerate(positionals: string[], options: Record<string, unknow
     exitInvalidArg('prompt is required. Usage: framlit generate <prompt>', outputMode);
   }
 
+  if (options.sanitize) {
+    const { value, removed } = sanitizeUntrustedText(prompt);
+    if (removed.length) {
+      process.stderr.write(`[sanitize] stripped ${removed.length} suspicious line(s) from prompt\n`);
+    }
+    prompt = value;
+  }
   validateTextInput(prompt, 'prompt');
 
   if (options['dry-run']) {
@@ -234,6 +241,13 @@ async function cmdModify(positionals: string[], options: Record<string, unknown>
     exitInvalidArg('--code and --instruction are required', outputMode);
   }
 
+  if (options.sanitize) {
+    const { value, removed } = sanitizeUntrustedText(instruction);
+    if (removed.length) {
+      process.stderr.write(`[sanitize] stripped ${removed.length} suspicious line(s) from instruction\n`);
+    }
+    instruction = value;
+  }
   validateTextInput(instruction, 'instruction');
 
   if (options['dry-run']) {
@@ -441,6 +455,9 @@ async function main(): Promise<void> {
       // Global
       output: { type: 'string', short: 'o' },
       json: { type: 'string', short: 'j' },
+      'json-file': { type: 'string' },
+      fields: { type: 'string' },
+      sanitize: { type: 'boolean' },
       'dry-run': { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
 
@@ -473,6 +490,22 @@ async function main(): Promise<void> {
       styles: { type: 'string' },
       'existing-code': { type: 'string' },
       model: { type: 'string' },
+
+      // narration
+      target: { type: 'string' },
+      voice: { type: 'string' },
+      lang: { type: 'string' },
+      out: { type: 'string' },
+
+      // campaign
+      plan: { type: 'string' },
+      'plan-file': { type: 'string' },
+
+      // shopify
+      limit: { type: 'string' },
+
+      // mcp
+      services: { type: 'string' },
     },
   });
 
@@ -482,6 +515,12 @@ async function main(): Promise<void> {
   if (values.help || !command || command === 'help') {
     printHelp();
     return;
+  }
+
+  // Bind --fields globally so individual commands' formatOutput calls
+  // honor the mask without each having to thread the option.
+  if (typeof values.fields === 'string') {
+    setOutputDefaults({ fields: values.fields });
   }
 
   try {
