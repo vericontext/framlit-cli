@@ -183,6 +183,7 @@ async function cmdGenerate(positionals: string[], options: Record<string, unknow
 
   let prompt: string;
   let format: 'landscape' | 'portrait' | 'square' | undefined;
+  let imageGen: { enabled: boolean; model?: 'flux-schnell' | 'gpt-image-2' } | undefined;
 
   if (jsonInput) {
     const input = jsonInput === '-'
@@ -191,9 +192,17 @@ async function cmdGenerate(positionals: string[], options: Record<string, unknow
     const parsed = JSON.parse(input);
     prompt = parsed.prompt;
     format = parsed.format;
+    imageGen = parsed.imageGen;
   } else {
     prompt = positionals.join(' ');
     format = options.format as typeof format;
+    if (options['image-gen']) {
+      const m = (options['image-gen-model'] as string | undefined) || 'flux-schnell';
+      if (m !== 'flux-schnell' && m !== 'gpt-image-2') {
+        exitInvalidArg(`--image-gen-model must be flux-schnell or gpt-image-2 (got "${m}")`, outputMode);
+      }
+      imageGen = { enabled: true, model: m as 'flux-schnell' | 'gpt-image-2' };
+    }
   }
 
   if (!prompt) {
@@ -210,13 +219,13 @@ async function cmdGenerate(positionals: string[], options: Record<string, unknow
   validateTextInput(prompt, 'prompt');
 
   if (options['dry-run']) {
-    const payload = { prompt, format: format ?? 'landscape' };
+    const payload = { prompt, format: format ?? 'landscape', ...(imageGen ? { imageGen } : {}) };
     console.log(formatOutput(payload, `[dry-run] Would generate code with prompt: "${prompt}"`, outputMode));
     return;
   }
 
   const client = new FramlitClient(getApiKey());
-  const result = await handlers.handleGenerateCode(client, { prompt, format });
+  const result = await handlers.handleGenerateCode(client, { prompt, format, imageGen });
   console.log(formatOutput(result.data, result.message, outputMode));
 }
 
@@ -506,6 +515,10 @@ async function main(): Promise<void> {
 
       // mcp
       services: { type: 'string' },
+
+      // generate — AI image gen (#110 part E, v0.9.0)
+      'image-gen': { type: 'boolean' },
+      'image-gen-model': { type: 'string' },
     },
   });
 

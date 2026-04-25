@@ -111,6 +111,7 @@ Run `framlit help` for the full reference.
 | `--json-file <path>` | Read the same JSON payload from disk. Path-traversal validated. |
 | `--fields "data.id,data.name"` | Client-side projection. Shrinks the JSON response to just these dot-paths so big list/get responses don't blow up your context. Supports `items[].id` array projection. |
 | `--sanitize` | Strip known prompt-injection markers from text inputs (`brief`, `prompt`, `instruction`) before dispatching. Reports stripped lines on stderr. Opt-in. |
+| `--image-gen` (`generate` only) | Force AI product image generation. Adds 3 cr (default flux-schnell) or 12 cr (`--image-gen-model gpt-image-2`). Use when prompt mentions a product but no image is attached — prevents hallucinated URLs / CSS-painted placeholders. v0.9.0+. |
 | `--dry-run` | Validate + preview a mutating call without executing. Works without an API key. |
 | `--poll` | NDJSON status stream until terminal state. On `render status`, `batch start`, `batch status`. |
 | `framlit schema [tool]` | Runtime JSON Schema introspection for agents. |

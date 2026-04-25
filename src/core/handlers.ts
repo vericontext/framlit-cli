@@ -23,11 +23,21 @@ export interface HandlerResult {
 
 export async function handleGenerateCode(
   client: FramlitClient,
-  args: { prompt: string; format?: 'landscape' | 'portrait' | 'square' }
+  args: {
+    prompt: string;
+    format?: 'landscape' | 'portrait' | 'square';
+    /**
+     * When set, the server forces the generate_product_image tool to be
+     * called before writing code — produces a real product image (FLUX-schnell
+     * or GPT Image 2) instead of leaving the AI to hallucinate or paint CSS.
+     * Adds 3 cr (flux-schnell) or 12 cr (gpt-image-2) on top of the base 1 cr.
+     */
+    imageGen?: { enabled: boolean; model?: 'flux-schnell' | 'gpt-image-2' };
+  }
 ): Promise<HandlerResult> {
   const result = await client.generateCode(args);
 
-  let message = `Generated Remotion code (${result.creditsUsed} credit used, ${result.creditsRemaining} remaining):\n\n\`\`\`tsx\n${result.code}\n\`\`\``;
+  let message = `Generated Remotion code (${result.creditsUsed} credit${result.creditsUsed === 1 ? '' : 's'} used, ${result.creditsRemaining} remaining):\n\n\`\`\`tsx\n${result.code}\n\`\`\``;
   if (result.previewUrl) {
     message += `\n\nPreview: ${result.previewUrl}\nOpen the link above to see the video preview (expires in 24h)`;
   }

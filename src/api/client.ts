@@ -167,6 +167,7 @@ export class FramlitClient {
   async generateCode(params: {
     prompt: string;
     format?: 'landscape' | 'portrait' | 'square';
+    imageGen?: { enabled: boolean; model?: 'flux-schnell' | 'gpt-image-2' };
   }): Promise<GenerateCodeResult> {
     return this.request<GenerateCodeResult>('/generate-code', {
       method: 'POST',
