@@ -20,6 +20,13 @@ const videoFormat = z.enum(['landscape', 'portrait', 'square']).optional();
 export const generateCodeSchema = z.object({
   prompt: z.string().describe('Description of the video to generate. Be specific about animations, colors, timing, and content.'),
   format: videoFormat.describe('Video format. Defaults to landscape (1920x1080).'),
+  imageGen: z
+    .object({
+      enabled: z.boolean().describe('Force the agent to call generate_product_image before writing code (no hallucinated URLs, no CSS-painted products).'),
+      model: z.enum(['flux-schnell', 'gpt-image-2']).optional().describe('Image-gen provider. flux-schnell (default) is fast/cheap; gpt-image-2 is premium photoreal.'),
+    })
+    .optional()
+    .describe('Opt into AI product image generation. Adds 3 cr (flux-schnell) or 12 cr (gpt-image-2) on top of the base 1 cr.'),
 });
 
 export const modifyCodeSchema = z.object({

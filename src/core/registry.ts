@@ -44,14 +44,16 @@ export const TOOL_REGISTRY: ToolEntry[] = [
   {
     name: 'framlit_generate_code',
     description: `Generate Remotion video code from a text description.
-Uses 1 credit per generation.
+Costs 1 credit base. With imageGen.enabled: +3 cr (flux-schnell) or +12 cr (gpt-image-2) for AI product image generation.
 
 The generated code is a valid Remotion composition that can be previewed in browser, rendered to MP4, or saved as a project.
 
-Supports: logo animations, product demos, social media content, data visualizations, 3D animations, narrated videos, and style variations.`,
+Supports: logo animations, product demos, social media content, data visualizations, 3D animations, narrated videos, and style variations.
+
+When the user mentions "product" / "showcase" / "ad" but does not have a product photo, set imageGen.enabled = true so the agent calls generate_product_image first instead of hallucinating an image URL or painting a CSS placeholder.`,
     schema: schemas.generateCodeSchema,
     handler: (c, a) => handlers.handleGenerateCode(c, a as z.infer<typeof schemas.generateCodeSchema>),
-    credits: 1,
+    credits: 1, // base cost; +3 (flux) or +12 (gpt-image-2) when imageGen.enabled — see description
     category: 'generate',
   },
   {

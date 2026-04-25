@@ -59,6 +59,31 @@ RENDER_ID=$(framlit render "$(jq -r .data.projectId project.json)" --output json
 framlit render status "$RENDER_ID" --poll --output json | jq -r 'select(.status=="completed") | .videoUrl'
 ```
 
+### 1b. Product ad without a product photo (🪄 AI image, v0.9.0+)
+
+When the user wants a product showcase but has no image attached, opt into
+AI image generation so the agent calls `generate_product_image` first
+instead of hallucinating an image URL or painting CSS shapes:
+
+```bash
+# Default: FLUX-schnell (1 base + 3 image-gen = 4 cr, ~3s wall time)
+framlit generate "15-second sneaker showcase ad, dark premium background" \
+  --image-gen --output json
+
+# Premium: GPT Image 2 (1 + 12 = 13 cr, ~10-15s, photoreal + reference-image input)
+framlit generate "Hero shot of a luxury watch, studio lighting" \
+  --image-gen --image-gen-model gpt-image-2 --output json
+
+# Same via --json
+framlit generate --json '{"prompt":"...","imageGen":{"enabled":true,"model":"flux-schnell"}}' \
+  --output json
+```
+
+Default to `flux-schnell` unless the user asks for photorealism or has
+already mentioned a reference photo. The generated image is saved to the
+user's `workspace-assets` Supabase bucket and lands inside `<Img src=...>`
+in the returned code automatically — no extra step.
+
 ### 2. Batch-personalize from a product catalog
 
 ```bash
