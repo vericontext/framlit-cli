@@ -112,7 +112,7 @@ framlit batch create --manifest catalog.json --template-id spotlight-minimal \
 Hosted images? Use `--rows-file rows.json` instead — same structure, but
 plain `productImage` URLs.
 
-### 3. Narrated ad (Pro, 5 cr, ~90-180s wall time)
+### 3. Narrated ad (Pro, 3 cr, ~90-180s wall time)
 
 ```bash
 framlit narration cap                                   # check monthly slot
@@ -144,12 +144,6 @@ JSON
 framlit brand set --json-file brand.json --dry-run --output json
 framlit brand set --json-file brand.json --output json
 framlit brand get --output json
-```
-
-### 6. Shopify (read-only — connect via web first)
-
-```bash
-framlit shopify products --limit 10 --output json | jq '.data.products[]'
 ```
 
 ## Discoverability

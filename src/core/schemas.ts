@@ -46,14 +46,14 @@ export const getProjectSchema = z.object({
 
 export const createProjectSchema = z.object({
   name: z.string().describe('Name for the project.'),
-  code: z.string().optional().describe('Optional initial Remotion code.'),
+  code: z.string().optional().describe('Optional initial Remotion code. Must be code Framlit generated (from generate/modify) or an existing project or template; other code is rejected with UNVERIFIED_CODE.'),
   format: videoFormat.describe('Video format. Defaults to landscape.'),
 });
 
 export const updateProjectSchema = z.object({
   projectId: z.string().describe('The project ID.'),
   name: z.string().optional().describe('New name for the project.'),
-  code: z.string().optional().describe('Updated Remotion code.'),
+  code: z.string().optional().describe('Updated Remotion code. Must be code Framlit generated (from generate/modify) or an existing project or template; other code is rejected with UNVERIFIED_CODE.'),
 });
 
 // ---------------------------------------------------------------------------
@@ -98,7 +98,7 @@ export const previewCodeSchema = z.object({
 export const createBatchSchema = z.object({
   rows: z.string().describe('JSON array of row objects (e.g., [{"productName":"Shoe","price":"$99","productImage":"https://..."}]). Each row generates one video.'),
   templateId: z.string().optional().describe('Template ID to use as base. Either templateId or templateCode is required.'),
-  templateCode: z.string().optional().describe('Template code to use (if not using a template ID).'),
+  templateCode: z.string().optional().describe('Template code to use (if not using a template ID). Must be code Framlit generated or an existing project or template; other code is rejected with UNVERIFIED_CODE.'),
 });
 
 export const batchJobIdSchema = z.object({
@@ -136,7 +136,7 @@ export const generateNarratedAdSchema = z.object({
   brief: z.string().min(5).describe('Ad brief — what the narration should say or be about. Min 5 chars.'),
   productImageUrl: z.string().url().nullish().describe('Optional product image the codegen stage can reference.'),
   targetSeconds: z.number().int().min(8).max(60).optional().describe('Target spoken duration in seconds. Default 20. Clamped to 8–60.'),
-  voiceId: z.string().optional().describe('ElevenLabs voice ID. Defaults to Rachel. Use `framlit narration voices` for the preset list.'),
+  voiceId: z.string().optional().describe('Kokoro voice ID: af_heart (default), af_bella, af_jessica, am_adam, am_michael or am_eric.'),
   language: z.enum(['en', 'ko']).optional().describe('Spoken language. "en" or "ko". Default "en".'),
   brandDnaId: z.string().nullish().describe('Reserved — workspace-scoped brand DNA selector.'),
 });

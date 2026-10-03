@@ -27,7 +27,7 @@ handlers, same credits. Any tool added to one surface appears in the other.
 | **Batch** | A job that fans out one template across many rows of data. Has a `jobId` and N child videos. |
 | **Template** | A pre-built Remotion component with parameter slots — feeds batch jobs. |
 | **Variation** | An A/B style alternative for an existing project (same content, different look). |
-| **Narrated ad** | Pipeline output: AI script + ElevenLabs voiceover + word-synced visuals. Pro-only. |
+| **Narrated ad** | Pipeline output: AI script + Kokoro TTS voiceover + word-synced visuals. Editor Pro and Studio only. |
 | **Campaign** | Multi-segment plan (e.g. 3 audience cuts × 3 hooks) executed in parallel fan-out. Pro-only. |
 | **Brand DNA** | Saved brand profile (name, colors, fonts, tone) injected into every generation. |
 | **Manifest** | A `--manifest` JSON for `batch create` — keys ending in `Path` are local files to upload. |

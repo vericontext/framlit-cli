@@ -9,7 +9,7 @@
  *   framlit narration cap
  *   framlit narration stages <projectId> [--format json|md]
  *
- * Pro-only. `generate` costs 5 credits + 1 monthly slot. ~90-180s wall time
+ * Editor Pro and Studio only. `generate` costs 3 credits + 1 monthly slot. ~90-180s wall time
  * — be patient or pipe stderr to a log.
  */
 

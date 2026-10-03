@@ -189,7 +189,7 @@ export async function handleGetCredits(
   const userInfo = await client.getUserInfo();
 
   const planNames: Record<string, string> = {
-    free: 'Free', hobby: 'Hobby', pro: 'Pro', team: 'Team',
+    free: 'Free', hobby: 'Free', pro: 'Editor Pro', team: 'Studio',
   };
   const planName = planNames[userInfo.planTier] ?? userInfo.planTier;
 
@@ -202,11 +202,11 @@ export async function handleGetCredits(
   message += `- Watermark: ${userInfo.limits.hasWatermark ? 'Yes' : 'No'}\n`;
 
   if (userInfo.creditsRemaining <= 10) {
-    message += `\nLow credits! Get more at https://framlit.app/pricing`;
+    message += `\nLow credits! Get more at https://framlit.app/docs/pricing`;
   }
 
   if (userInfo.planTier === 'free' || userInfo.planTier === 'hobby') {
-    message += `\n\nUpgrade to Pro for 500 credits/month and no watermark: https://framlit.app/pricing`;
+    message += `\n\nUpgrade to Editor Pro for 300 credits/month and no watermark: https://framlit.app/docs/pricing`;
   }
 
   return { data: userInfo, message };

@@ -102,7 +102,7 @@ const server = new Server(
 const apiKey = process.env.FRAMLIT_API_KEY;
 if (!apiKey) {
   console.error('Error: FRAMLIT_API_KEY environment variable is required');
-  console.error('Get your API key at https://framlit.app/settings/api-keys');
+  console.error('Get your API key at https://framlit.app/profile');
   process.exit(1);
 }
 

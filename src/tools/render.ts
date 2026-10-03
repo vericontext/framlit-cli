@@ -12,8 +12,8 @@ export const renderVideoTool: Tool = {
   description: `Start rendering a project to MP4 video.
 Rendering is done on Framlit's servers (AWS Lambda).
 
-Note: Free/Hobby plans include a watermark. 
-Upgrade to Pro to remove the watermark.`,
+Note: Free plan videos include a watermark.
+Upgrade to Editor Pro to remove the watermark.`,
   inputSchema: {
     type: 'object',
     properties: {

@@ -25,6 +25,7 @@
 
 import { parseArgs } from 'node:util';
 import { readFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { FramlitClient } from '../api/client.js';
 import { TOOL_REGISTRY, getToolByName, zodToJsonSchema } from '../core/registry.js';
 import * as handlers from '../core/handlers.js';
@@ -50,7 +51,7 @@ import { cmdShopify } from './commands/shopify.js';
 // Read version from package.json at runtime
 const VERSION = (() => {
   try {
-    const pkgPath = require('node:path').resolve(__dirname, '..', '..', 'package.json');
+    const pkgPath = resolve(__dirname, '..', '..', 'package.json');
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
     return pkg.version || '0.0.0';
   } catch {
@@ -123,7 +124,7 @@ COMMANDS
   variations generate <projectId> --prompt "..."   Generate style variations
   variations list <projectId>                      List variations for a project
   variations apply <projectId> <variationId>       Apply a variation to project
-  narration generate "<brief>"   Full narrated-ad pipeline (Pro, 5 cr, ~90-180s)
+  narration generate "<brief>"   Full narrated-ad pipeline (Pro, 3 cr, ~90-180s)
   narration cap                  Monthly narrated-ad cap status
   narration stages <id>          Inspect script + audio + storyboard + code
   campaign plan "<brief>"        Plan a multi-segment campaign (Pro, 10 cr)
@@ -132,7 +133,6 @@ COMMANDS
   campaign run <runId>           One run + variations + linked projects
   brand get                      Get effective brand DNA
   brand set --json '<payload>'   Upsert your brand profile
-  shopify products               List cached Shopify catalog (read-only)
   schema [tool-name]       Show tool schemas (agent discovery)
   mcp                      Start MCP server (for IDE integration)
   version                  Show version

@@ -94,7 +94,7 @@ See `framlit credits` for current balance. Costs are stable but check
 | `generate`, `modify` | 1 each |
 | `variations generate` | 1 / variation |
 | `batch create` | 0.2 / video |
-| `narration generate` | 5 (Pro only, 1 monthly slot) |
+| `narration generate` | 3 (Pro only, 1 monthly slot) |
 | `campaign plan` | 10 (Pro only) |
 | `campaign execute` | 2 / segment (Pro only) |
 | Everything else (list/get/render/cancel/cap/brand) | 0 |
