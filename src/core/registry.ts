@@ -109,7 +109,7 @@ Projects store your video code and can be rendered to MP4.`,
     description: `Start rendering a project to MP4 video.
 Rendering is done on Framlit servers (AWS Lambda).
 
-Note: Free/Hobby plans include a watermark. Upgrade to Pro to remove the watermark.`,
+Note: Free plan videos include a watermark. Upgrade to Editor Pro to remove the watermark.`,
     schema: schemas.renderVideoSchema,
     handler: (c, a) => handlers.handleRenderVideo(c, a as z.infer<typeof schemas.renderVideoSchema>),
     credits: 0,
@@ -211,7 +211,7 @@ Returns results with download URLs when complete. This may take several minutes 
     name: 'framlit_generate_variations',
     description: `Generate style variations of a video for A/B testing.
 Each variation applies a different visual style (minimal, bold, dynamic, cinematic, energetic, playful).
-Costs 1 credit per variation. Free plan: 2 max, Pro: 5, Team: 10.`,
+Costs 1 credit per variation. Free: 2 max, Editor Pro: 5, Studio: 10.`,
     schema: schemas.generateVariationsSchema,
     handler: (c, a) => handlers.handleGenerateVariations(c, a as z.infer<typeof schemas.generateVariationsSchema>),
     credits: '1/variation',
@@ -238,8 +238,8 @@ Costs 1 credit per variation. Free plan: 2 max, Pro: 5, Team: 10.`,
   {
     name: 'framlit_generate_narrated_ad',
     description: `Generate a full narrated ad (script + voiceover + word-synced visuals).
-Pro-only. Costs 5 credits + counts against the monthly cap (50/month on Pro).
-Pipeline: Haiku writes the script, ElevenLabs records voice with word-level alignment, a deterministic storyboard step computes non-overlapping scene boundaries, Sonnet generates Remotion code anchoring reveals to spoken words. ~90-180s wall time.
+Editor Pro and Studio only. Costs 3 credits + counts against the monthly cap (25/month on Editor Pro, 100 on Studio).
+Pipeline: Haiku writes the script, Kokoro TTS records the voiceover with word-level alignment, a deterministic storyboard step computes non-overlapping scene boundaries, Sonnet generates Remotion code anchoring reveals to spoken words. ~90-180s wall time.
 Returns the new projectId, audio URL, storyboard scenes, and generated TSX.`,
     schema: schemas.generateNarratedAdSchema,
     handler: (c, a) =>

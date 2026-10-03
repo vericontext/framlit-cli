@@ -30,7 +30,6 @@ import {
   applyUploadResults,
   mimeFromFilename,
   parseManifest,
-  type PendingUpload,
 } from '../../core/manifest.js';
 import {
   detectOutputMode,
@@ -271,7 +270,7 @@ async function batchCreate(
 // ---------------------------------------------------------------------------
 
 async function pollUntilTerminal(client: FramlitClient, jobId: string): Promise<void> {
-  while (true) {
+  for (;;) {
     const result = await handlers.handleBatchStatus(client, { jobId });
     writeNdjsonLine(result.data);
     const data = result.data as { status?: string };

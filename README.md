@@ -96,9 +96,6 @@ framlit campaign run <runId>
 framlit brand get
 framlit brand set --json-file brand.json     # Free: name + 3 colors only
 
-# Shopify (v0.7+, read-only — connect via web first)
-framlit shopify products --limit 10 --output json | jq
-
 # Discovery
 framlit templates --category social
 framlit credits
@@ -249,8 +246,8 @@ All tools below are available as both CLI commands and MCP tools.
 ## Pricing
 
 CLI and MCP use the same credit system as the Framlit web app — see
-[framlit.app/pricing](https://framlit.app/pricing) for current limits and
-prices. Hobby plan videos include a watermark; Pro and Team don't.
+[framlit.app/docs/pricing](https://framlit.app/docs/pricing) for current limits and
+prices. Free plan videos include a watermark; Editor Pro and Studio don't.
 
 ## Development
 
@@ -271,7 +268,7 @@ npm test
 
 ## Links
 
-- [framlit.app](https://framlit.app) · [Developers](https://framlit.app/developers) · [Pricing](https://framlit.app/pricing) · [API Keys](https://framlit.app/settings/api-keys)
+- [framlit.app](https://framlit.app) · [Developers](https://framlit.app/developers) · [Pricing](https://framlit.app/docs/pricing) · [API Keys](https://framlit.app/profile)
 
 ## License
 

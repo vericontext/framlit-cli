@@ -31,11 +31,11 @@ export async function handleGetCredits(client: FramlitClient) {
   message += `- Watermark: ${userInfo.limits.hasWatermark ? 'Yes' : 'No'}\n`;
 
   if (userInfo.creditsRemaining <= 10) {
-    message += `\n⚠️ Low credits! Get more at https://framlit.app/pricing`;
+    message += `\n⚠️ Low credits! Get more at https://framlit.app/docs/pricing`;
   }
 
   if (userInfo.planTier === 'free' || userInfo.planTier === 'hobby') {
-    message += `\n\n💡 Upgrade to Pro for 500 credits/month and no watermark: https://framlit.app/pricing`;
+    message += `\n\n💡 Upgrade to Editor Pro for 300 credits/month and no watermark: https://framlit.app/docs/pricing`;
   }
 
   return {
@@ -53,11 +53,11 @@ function getPlanInfo(tier: string): { name: string } {
     case 'free':
       return { name: 'Free' };
     case 'hobby':
-      return { name: 'Hobby' };
+      return { name: 'Free' }; // legacy tier name
     case 'pro':
-      return { name: 'Pro' };
+      return { name: 'Editor Pro' };
     case 'team':
-      return { name: 'Team' };
+      return { name: 'Studio' };
     default:
       return { name: tier };
   }

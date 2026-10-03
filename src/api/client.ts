@@ -138,13 +138,13 @@ export class FramlitClient {
       // Handle specific error codes for upsell messages
       if (data.code === 'INSUFFICIENT_CREDITS') {
         throw new Error(
-          `${error}\n\n💡 Get more credits at https://framlit.app/pricing`
+          `${error}\n\n💡 Get more credits at https://framlit.app/docs/pricing`
         );
       }
       
       if (data.code === 'PLAN_LIMIT_EXCEEDED') {
         throw new Error(
-          `${error}\n\n💡 Upgrade to Pro for more capacity at https://framlit.app/pricing`
+          `${error}\n\n💡 Upgrade to Editor Pro for more capacity at https://framlit.app/docs/pricing`
         );
       }
       
@@ -412,7 +412,7 @@ export class FramlitClient {
 
   /**
    * Generate a full narrated ad. Server runs script (Haiku) + audio
-   * (ElevenLabs with-timestamps) + storyboard (deterministic) + code
+   * (Kokoro TTS with word timestamps) + storyboard (deterministic) + code
    * (Sonnet w/ extended thinking) and returns the final state. The
    * web variant streams SSE events; the MCP proxy buffers them so the
    * client gets a single response. ~90-180s wall time.
