@@ -521,28 +521,3 @@ export async function handleSetBrand(
   const result = await client.setBrand(args);
   return { data: result, message: 'Brand profile updated.' };
 }
-
-// ---------------------------------------------------------------------------
-// Shopify
-// ---------------------------------------------------------------------------
-
-export async function handleListShopifyProducts(
-  client: FramlitClient,
-): Promise<HandlerResult> {
-  const products = await client.listShopifyProducts();
-  if (products.length === 0) {
-    return {
-      data: { products: [] },
-      message: 'No Shopify products synced. Connect a store at https://framlit.app/dashboard then run `framlit shopify products` again.',
-    };
-  }
-  const sample = products
-    .slice(0, 10)
-    .map((p) => `- ${p.title} ($${p.price_amount ?? '?'})`)
-    .join('\n');
-  const more = products.length > 10 ? `\n…and ${products.length - 10} more` : '';
-  return {
-    data: { products },
-    message: `${products.length} Shopify product(s):\n\n${sample}${more}`,
-  };
-}

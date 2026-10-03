@@ -538,28 +538,12 @@ export class FramlitClient {
       body: JSON.stringify(payload),
     });
   }
-
-  // -------------------------------------------------------------------------
-  // Shopify
-  // -------------------------------------------------------------------------
-
-  /**
-   * Cached Shopify product catalog (up to 500 rows) for the caller's
-   * connected store. Read-only. The OAuth connect flow remains
-   * browser-only; this endpoint just reads what's already synced.
-   */
-  async listShopifyProducts(): Promise<ShopifyProduct[]> {
-    const result = await this.request<{ products: ShopifyProduct[] }>(
-      '/shopify/products',
-    );
-    return result.products;
-  }
 }
 
 const USER_AGENT = 'framlit-mcp/0.7.0';
 
 // ---------------------------------------------------------------------------
-// Narrated ad / Campaign / Brand / Shopify types
+// Narrated ad / Campaign / Brand types
 // ---------------------------------------------------------------------------
 
 export interface NarratedAdResult {
@@ -705,15 +689,4 @@ export interface BrandResult {
     brandLearningEnabled: boolean;
     freeColorLimit: number;
   };
-}
-
-export interface ShopifyProduct {
-  shopify_product_id: string;
-  title: string;
-  handle: string;
-  description: string | null;
-  price_amount: number | null;
-  featured_image_url: string | null;
-  vendor: string | null;
-  product_type: string | null;
 }

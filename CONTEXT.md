@@ -35,7 +35,7 @@ handlers, same credits. Any tool added to one surface appears in the other.
 
 ## Services
 
-29 tools total, grouped by category. `framlit schema` returns the full
+28 tools total, grouped by category. `framlit schema` returns the full
 JSON Schema; this is the human map.
 
 | Category | Tools | CLI namespace |
@@ -50,12 +50,11 @@ JSON Schema; this is the human map.
 | Narration (Pro) | `framlit_generate_narrated_ad`, `framlit_get_narration_cap`, `framlit_get_narrated_ad_stages` | `narration *` |
 | Campaign (Pro) | `framlit_campaign_plan`, `framlit_campaign_execute`, `framlit_list_campaign_runs`, `framlit_get_campaign_run` | `campaign *` |
 | Brand | `framlit_get_brand`, `framlit_set_brand` | `brand *` |
-| Shopify | `framlit_list_shopify_products` | `shopify products` |
 
 ## Schema introspection
 
 ```bash
-framlit schema                            # all 29 tools (compact)
+framlit schema                            # all 28 tools (compact)
 framlit schema framlit_generate_code      # one tool's JSON Schema
 framlit help                              # all CLI subcommands + flags
 framlit <command> --help                  # one subcommand

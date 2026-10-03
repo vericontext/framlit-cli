@@ -150,7 +150,7 @@ framlit brand get --output json
 
 ```bash
 framlit help                       # all commands + flags
-framlit schema                     # full tool registry (29 tools, JSON Schema)
+framlit schema                     # full tool registry (28 tools, JSON Schema)
 framlit schema framlit_generate_code   # one tool's input schema
 ```
 
