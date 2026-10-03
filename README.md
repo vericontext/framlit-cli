@@ -128,7 +128,7 @@ For agents loading the CLI as a tool, ship these alongside your harness:
 The MCP server can be subset to keep tool count small:
 
 ```bash
-# Only load narration + campaign + brand tools (7/29) — saves prompt tokens
+# Only load narration + campaign + brand tools (7/28) — saves prompt tokens
 npx framlit-mcp --services narration,campaign,brand
 # or via env:
 FRAMLIT_MCP_SERVICES=batch,brand npx framlit-mcp

@@ -42,7 +42,6 @@ import { cmdVariations } from './commands/variations.js';
 import { cmdNarration } from './commands/narration.js';
 import { cmdCampaign } from './commands/campaign.js';
 import { cmdBrand } from './commands/brand.js';
-import { cmdShopify } from './commands/shopify.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -510,9 +509,6 @@ async function main(): Promise<void> {
       plan: { type: 'string' },
       'plan-file': { type: 'string' },
 
-      // shopify
-      limit: { type: 'string' },
-
       // mcp
       services: { type: 'string' },
 
@@ -582,9 +578,6 @@ async function main(): Promise<void> {
         break;
       case 'brand':
         await cmdBrand(rest, values, getApiKey);
-        break;
-      case 'shopify':
-        await cmdShopify(rest, values, getApiKey);
         break;
       case 'schema':
         cmdSchema(rest, values);

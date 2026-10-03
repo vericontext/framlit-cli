@@ -202,8 +202,3 @@ export const setBrandSchema = z.object({
   product_archetypes: z.array(z.string()).optional().describe('Pro-only.'),
 });
 
-// ---------------------------------------------------------------------------
-// Shopify
-// ---------------------------------------------------------------------------
-
-export const listShopifyProductsSchema = z.object({});

@@ -31,8 +31,7 @@ export interface ToolEntry {
     | 'batch'
     | 'narration'
     | 'campaign'
-    | 'brand'
-    | 'shopify';
+    | 'brand';
 }
 
 // ---------------------------------------------------------------------------
@@ -336,17 +335,6 @@ Pro tier: everything including tone_examples, do_nots, past_ad_urls, product_arc
       handlers.handleSetBrand(c, a as z.infer<typeof schemas.setBrandSchema>),
     credits: 0,
     category: 'brand',
-  },
-
-  // Shopify
-  {
-    name: 'framlit_list_shopify_products',
-    description:
-      'List the user\'s cached Shopify product catalog (up to 500 rows). Read-only — the OAuth connect flow stays browser-only. Pair with batch create to generate ads from real product data.',
-    schema: schemas.listShopifyProductsSchema,
-    handler: (c) => handlers.handleListShopifyProducts(c),
-    credits: 0,
-    category: 'shopify',
   },
 ];
 

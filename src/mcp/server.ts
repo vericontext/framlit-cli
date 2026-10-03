@@ -40,7 +40,7 @@ const SERVER_VERSION = (() => {
 // ---------------------------------------------------------------------------
 const ALL_CATEGORIES: ReadonlyArray<ToolEntry['category']> = [
   'generate', 'project', 'render', 'template', 'credits',
-  'preview', 'batch', 'narration', 'campaign', 'brand', 'shopify',
+  'preview', 'batch', 'narration', 'campaign', 'brand',
 ];
 
 function parseServicesFilter(): ReadonlySet<ToolEntry['category']> | null {
