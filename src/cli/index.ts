@@ -42,6 +42,7 @@ import { cmdVariations } from './commands/variations.js';
 import { cmdNarration } from './commands/narration.js';
 import { cmdCampaign } from './commands/campaign.js';
 import { cmdBrand } from './commands/brand.js';
+import { cmdScene } from './commands/scene.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -132,6 +133,9 @@ COMMANDS
   campaign run <runId>           One run + variations + linked projects
   brand get                      Get effective brand DNA
   brand set --json '<payload>'   Upsert your brand profile
+  scene create --file <scene.json> [--name] [--project <id>]
+                                 Compile a Framlit Scene v1 into an editable project (0 cr)
+  scene get <projectId>          Read a project back as a scene, with editor edits
   schema [tool-name]       Show tool schemas (agent discovery)
   mcp                      Start MCP server (for IDE integration)
   version                  Show version
@@ -509,6 +513,10 @@ async function main(): Promise<void> {
       plan: { type: 'string' },
       'plan-file': { type: 'string' },
 
+      // scene
+      file: { type: 'string' },
+      project: { type: 'string' },
+
       // mcp
       services: { type: 'string' },
 
@@ -578,6 +586,9 @@ async function main(): Promise<void> {
         break;
       case 'brand':
         await cmdBrand(rest, values, getApiKey);
+        break;
+      case 'scene':
+        await cmdScene(rest, values, getApiKey);
         break;
       case 'schema':
         cmdSchema(rest, values);

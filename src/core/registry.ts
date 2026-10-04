@@ -31,7 +31,8 @@ export interface ToolEntry {
     | 'batch'
     | 'narration'
     | 'campaign'
-    | 'brand';
+    | 'brand'
+    | 'scene';
 }
 
 // ---------------------------------------------------------------------------
@@ -100,6 +101,33 @@ Projects store your video code and can be rendered to MP4.`,
     handler: (c, a) => handlers.handleUpdateProject(c, a as z.infer<typeof schemas.updateProjectSchema>),
     credits: 0,
     category: 'project',
+  },
+
+  // Scenes (the open format)
+  {
+    name: 'framlit_create_scene',
+    description: `Turn a Framlit Scene v1 (JSON) into an editable Framlit project. No credits.
+
+Use this when you want to design the video yourself instead of asking Framlit's AI to: describe the canvas, background, and every layer's position, size, text or media, timing, and entrance/exit preset. Framlit compiles it to Remotion code; the user can then drag layers, record motion, and retime them in the editor, and you can render it with framlit_render_video.
+
+Minimal scene:
+{"version":1,"canvas":{"width":1080,"height":1920,"durationInFrames":150},"background":{"color":"#0f172a"},
+ "layers":[{"id":"headline","type":"text","text":"Ship faster","x":80,"y":300,"width":920,"height":240,"style":{"fontFamily":"Poppins","fontSize":120,"fontWeight":800,"color":"#ffffff"},"enter":{"preset":"rise"}}]}
+
+Layer types: text, image, video, shape. Media must be https URLs. Presets: fade, rise, pop, slideLeft, slideRight, wipe. Optional "motion": [{"layerId","points":[{"frame","x","y"}]}] (offsets in px).
+Full schema: https://framlit.app/schemas/framlit-scene.v1.json`,
+    schema: schemas.createSceneSchema,
+    handler: (c, a) => handlers.handleCreateScene(c, a as z.infer<typeof schemas.createSceneSchema>),
+    credits: 0,
+    category: 'scene',
+  },
+  {
+    name: 'framlit_get_scene',
+    description: `Read a project as a Framlit Scene v1, including the edits people made in the editor (moved layers, changed timing, recorded motion). Change it and send it back with framlit_create_scene and the same projectId. No credits.`,
+    schema: schemas.getSceneSchema,
+    handler: (c, a) => handlers.handleGetScene(c, a as z.infer<typeof schemas.getSceneSchema>),
+    credits: 0,
+    category: 'scene',
   },
 
   // Rendering

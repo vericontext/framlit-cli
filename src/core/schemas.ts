@@ -95,6 +95,16 @@ export const previewCodeSchema = z.object({
 // Batch
 // ---------------------------------------------------------------------------
 
+export const createSceneSchema = z.object({
+  scene: z.string().describe('Framlit Scene v1 as a JSON string. Schema: https://framlit.app/schemas/framlit-scene.v1.json'),
+  name: z.string().optional().describe('Project name.'),
+  projectId: z.string().optional().describe('Replace this project\'s video instead of creating a new project (e.g. after framlit_get_scene).'),
+});
+
+export const getSceneSchema = z.object({
+  projectId: z.string().describe('The project ID.'),
+});
+
 export const createBatchSchema = z.object({
   rows: z.string().describe('JSON array of row objects (e.g., [{"productName":"Shoe","price":"$99","productImage":"https://..."}]). Each row generates one video.'),
   templateId: z.string().optional().describe('Template ID to use as base. Either templateId or templateCode is required.'),

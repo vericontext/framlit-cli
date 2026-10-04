@@ -538,6 +538,37 @@ export class FramlitClient {
       body: JSON.stringify(payload),
     });
   }
+
+  /**
+   * Compile a Framlit Scene v1 into an editable project (no credits).
+   * With projectId, the scene replaces that project's video.
+   */
+  async createScene(params: { scene: unknown; name?: string; projectId?: string }): Promise<SceneResult> {
+    return this.request<SceneResult>('/scenes', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  /** A project as a Framlit Scene v1, including edits made in the editor. */
+  async getScene(projectId: string): Promise<SceneRead> {
+    return this.request<SceneRead>(`/projects/${projectId}/scene`);
+  }
+}
+
+export interface SceneResult {
+  projectId: string;
+  editorUrl: string;
+  previewUrl?: string;
+  layers: number;
+  durationInFrames: number;
+}
+
+export interface SceneRead {
+  projectId: string;
+  scene: Record<string, unknown>;
+  /** false when the project was not compiled from a scene (layers and motion only). */
+  complete: boolean;
 }
 
 const USER_AGENT = 'framlit-mcp/0.7.0';

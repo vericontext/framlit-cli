@@ -146,6 +146,49 @@ framlit brand set --json-file brand.json --output json
 framlit brand get --output json
 ```
 
+### 6. Design the video yourself (Framlit Scene v1, 0 credits, v0.11.0+)
+
+When you know exactly what the video should look like, write it as a scene
+instead of a prompt. Framlit compiles the JSON into an editable project:
+the user can drag layers, retime them and record motion in the editor, and
+you can read their edits back. Never send Remotion code; Framlit only
+renders code it produced.
+
+```bash
+cat > scene.json <<'JSON'
+{
+  "version": 1,
+  "canvas": { "width": 1080, "height": 1920, "fps": 30, "durationInFrames": 150 },
+  "background": { "gradient": { "from": "#0f172a", "to": "#1e293b", "angle": 160 } },
+  "layers": [
+    { "id": "headline", "type": "text", "text": "Ship faster", "x": 80, "y": 300, "width": 920, "height": 260,
+      "style": { "fontFamily": "Poppins", "fontSize": 120, "fontWeight": 800, "color": "#ffffff", "textAlign": "center" },
+      "enter": { "preset": "rise" } },
+    { "id": "product", "type": "image", "src": "https://example.com/product.png", "x": 140, "y": 640, "width": 800, "height": 800,
+      "frameRange": [20, 149], "style": { "objectFit": "contain" }, "enter": { "preset": "pop", "durationInFrames": 20 } },
+    { "id": "cta", "type": "text", "text": "Order now", "x": 240, "y": 1560, "width": 600, "height": 140, "frameRange": [60, 149],
+      "style": { "background": "#22c55e", "borderRadius": 70, "fontSize": 56, "textAlign": "center", "color": "#052e16" },
+      "enter": { "preset": "slideLeft" } }
+  ],
+  "motion": [{ "layerId": "headline", "points": [{ "frame": 30, "x": 0, "y": 0 }, { "frame": 60, "x": 0, "y": -80 }] }]
+}
+JSON
+framlit scene create --file scene.json --name "Launch" --output json > made.json   # 0 credits
+PROJECT=$(jq -r .data.projectId made.json)
+
+# After the user edits it in the browser, read their changes back:
+framlit scene get "$PROJECT" --output json | jq .data.scene > scene.json
+# ...change scene.json, then replace the project's video:
+framlit scene create --file scene.json --project "$PROJECT" --output json
+```
+
+- Coordinates are pixels on the canvas; `frameRange` is `[first, last]` frame.
+- Layer types: `text`, `image`, `video`, `shape`. Media must be `https://`.
+- Presets: `fade`, `rise`, `pop`, `slideLeft`, `slideRight`, `wipe`.
+- Full schema: https://framlit.app/schemas/framlit-scene.v1.json
+- `scene get` on a project Framlit's AI generated returns `complete: false`:
+  its layers come back, but sending it back replaces the AI's design.
+
 ## Discoverability
 
 ```bash

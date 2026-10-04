@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { TOOL_REGISTRY, getToolByName, getToolNames, zodToJsonSchema } from '../src/core/registry';
 
 describe('Tool Registry', () => {
-  it('should have all tools registered (v0.7 added narration/campaign/brand tools)', () => {
-    expect(TOOL_REGISTRY).toHaveLength(28);
+  it('should have all tools registered (v0.11 added scene tools)', () => {
+    expect(TOOL_REGISTRY).toHaveLength(30);
   });
 
   it('should have unique tool names', () => {
@@ -40,8 +40,10 @@ describe('Tool Registry', () => {
 
   it('getToolNames returns all names', () => {
     const names = getToolNames();
-    expect(names).toHaveLength(28);
+    expect(names).toHaveLength(30);
     expect(names).toContain('framlit_generate_code');
+    expect(names).toContain('framlit_create_scene');
+    expect(names).toContain('framlit_get_scene');
     expect(names).toContain('framlit_render_video');
     // v0.7 additions
     expect(names).toContain('framlit_generate_narrated_ad');
