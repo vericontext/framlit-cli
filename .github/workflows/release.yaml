@@ -2,7 +2,7 @@
 #
 # Uses npm Trusted Publishing (OIDC): npm trusts this workflow in this
 # repository, so no npm token is stored anywhere. The package must list
-# vericontext/framlit-cli + release.yml as its trusted publisher on npmjs.com.
+# vericontext/framlit-cli + release.yaml as its trusted publisher on npmjs.com.
 name: Release
 
 on:
@@ -17,9 +17,9 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
