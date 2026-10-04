@@ -246,7 +246,7 @@ Returns the new projectId, audio URL, storyboard scenes, and generated TSX.`,
         c,
         a as z.infer<typeof schemas.generateNarratedAdSchema>,
       ),
-    credits: 5,
+    credits: 3,
     category: 'narration',
   },
   {
