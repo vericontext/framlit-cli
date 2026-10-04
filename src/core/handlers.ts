@@ -232,6 +232,38 @@ export async function handlePreviewCode(
 // Batch
 // ---------------------------------------------------------------------------
 
+export async function handleCreateScene(
+  client: FramlitClient,
+  args: { scene: string; name?: string; projectId?: string }
+): Promise<HandlerResult> {
+  let scene: unknown;
+  try {
+    scene = JSON.parse(args.scene);
+  } catch (error) {
+    throw new Error(`scene is not valid JSON: ${error instanceof Error ? error.message : 'parse error'}`);
+  }
+  const result = await client.createScene({ scene, name: args.name, projectId: args.projectId });
+  const preview = result.previewUrl ? `\nPreview: ${result.previewUrl}` : '';
+  return {
+    data: result,
+    message: `Scene compiled into an editable project (${result.layers} layers, ${result.durationInFrames} frames).\n\nProject: ${result.projectId}\nEdit: ${result.editorUrl}${preview}\n\nRender with framlit_render_video once it looks right.`,
+  };
+}
+
+export async function handleGetScene(
+  client: FramlitClient,
+  args: { projectId: string }
+): Promise<HandlerResult> {
+  const result = await client.getScene(args.projectId);
+  const note = result.complete
+    ? 'Change it and send it back with framlit_create_scene and the same projectId.'
+    : 'This project was not made from a scene: only its canvas, layers and motion are included. Sending it back replaces the original design.';
+  return {
+    data: result,
+    message: `${note}\n\n\`\`\`json\n${JSON.stringify(result.scene, null, 2)}\n\`\`\``,
+  };
+}
+
 export async function handleBatchCreate(
   client: FramlitClient,
   args: { rows: string; templateId?: string; templateCode?: string }

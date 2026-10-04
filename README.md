@@ -92,6 +92,11 @@ framlit campaign execute --plan-file plan.json
 framlit campaign runs
 framlit campaign run <runId>
 
+# Scenes — design the video as JSON, edit it in Framlit (v0.11+, 0 credits)
+framlit scene create --file scene.json --name "Launch"
+framlit scene get <projectId> > scene.json        # includes edits made in the editor
+framlit scene create --file scene.json --project <projectId>
+
 # Brand DNA (v0.7+)
 framlit brand get
 framlit brand set --json-file brand.json     # Free: name + 3 colors only
@@ -242,6 +247,8 @@ All tools below are available as both CLI commands and MCP tools.
 | `framlit_generate_variations` | `framlit variations generate` | 1 / variation |
 | `framlit_list_variations` | `framlit variations list` | 0 |
 | `framlit_apply_variation` | `framlit variations apply` | 0 |
+| `framlit_create_scene` | `framlit scene create` | 0 |
+| `framlit_get_scene` | `framlit scene get` | 0 |
 
 ## Pricing
 
