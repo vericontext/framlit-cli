@@ -15,21 +15,13 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { FramlitClient } from '../api/client.js';
+import { VERSION } from '../version.js';
 import { TOOL_REGISTRY, getToolByName, zodToJsonSchema, type ToolEntry } from '../core/registry.js';
 
 // Server configuration
 const SERVER_NAME = 'framlit-mcp';
-const SERVER_VERSION = (() => {
-  try {
-    const pkg = JSON.parse(readFileSync(resolve(__dirname, '..', '..', 'package.json'), 'utf-8'));
-    return pkg.version || '0.0.0';
-  } catch {
-    return '0.0.0';
-  }
-})();
+const SERVER_VERSION = VERSION;
 
 // ---------------------------------------------------------------------------
 // Service filter — agents can subset the tool registry to keep their context

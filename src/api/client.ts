@@ -4,6 +4,8 @@
  * HTTP client for communicating with Framlit SaaS API.
  */
 
+import { VERSION } from '../version.js';
+
 const DEFAULT_BASE_URL = 'https://framlit.app';
 
 export interface UserInfo {
@@ -400,7 +402,7 @@ export interface SceneRead {
   complete: boolean;
 }
 
-const USER_AGENT = 'framlit-mcp/0.7.0';
+const USER_AGENT = `framlit/${VERSION}`;
 
 // ---------------------------------------------------------------------------
 // Narrated ad / Brand types

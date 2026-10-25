@@ -25,7 +25,6 @@
 
 import { parseArgs } from 'node:util';
 import { readFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { FramlitClient } from '../api/client.js';
 import { TOOL_REGISTRY, getToolByName, zodToJsonSchema } from '../core/registry.js';
 import * as handlers from '../core/handlers.js';
@@ -40,21 +39,12 @@ import { cmdLogout } from './commands/logout.js';
 import { cmdNarration } from './commands/narration.js';
 import { cmdBrand } from './commands/brand.js';
 import { cmdScene } from './commands/scene.js';
+import { VERSION } from '../version.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-// Read version from package.json at runtime
-const VERSION = (() => {
-  try {
-    const pkgPath = resolve(__dirname, '..', '..', 'package.json');
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
-    return pkg.version || '0.0.0';
-  } catch {
-    return '0.0.0';
-  }
-})();
 
 function getApiKey(): string {
   // Precedence: FRAMLIT_API_KEY env var > saved CLI config.
