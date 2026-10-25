@@ -61,45 +61,6 @@ export interface PreviewResult {
   expiresAt: string;
 }
 
-export interface BatchJob {
-  jobId: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
-  totalRows: number;
-  completedRows?: number;
-  failedRows?: number;
-  progress?: number;
-  estimatedCredits?: number;
-  results?: Array<{
-    rowIndex: number;
-    filename: string;
-    status: string;
-    videoUrl?: string;
-    error?: string;
-  }>;
-  summary?: Record<string, unknown>;
-  message?: string;
-  refundedCredits?: number;
-}
-
-export interface Variation {
-  id: string;
-  style: string;
-  aiReasoning: string;
-  codeLength?: number;
-  code?: string;
-  selected?: boolean;
-  createdAt?: string;
-}
-
-export interface VariationsResult {
-  projectId: string;
-  totalGenerated: number;
-  creditsUsed: number;
-  creditsRemaining: number;
-  variations: Variation[];
-  errors?: Array<{ style: string; error: string }>;
-}
-
 export interface UploadAssetResult {
   url: string;
   path: string;
@@ -275,99 +236,11 @@ export class FramlitClient {
   }
 
   // -------------------------------------------------------------------------
-  // Batch
-  // -------------------------------------------------------------------------
-
-  /**
-   * Create a batch job from rows of data
-   */
-  async createBatch(params: {
-    rows: Record<string, string>[];
-    templateId?: string;
-    templateCode?: string;
-  }): Promise<BatchJob> {
-    return this.request<BatchJob>('/batch', {
-      method: 'POST',
-      body: JSON.stringify(params),
-    });
-  }
-
-  /**
-   * Start a batch job (triggers rendering)
-   */
-  async startBatch(jobId: string): Promise<BatchJob> {
-    return this.request<BatchJob>(`/batch/${jobId}`, {
-      method: 'POST',
-    });
-  }
-
-  /**
-   * Get batch job status
-   */
-  async getBatchStatus(jobId: string): Promise<BatchJob> {
-    return this.request<BatchJob>(`/batch/${jobId}`);
-  }
-
-  /**
-   * List user's batch jobs
-   */
-  async listBatches(): Promise<BatchJob[]> {
-    return this.request<BatchJob[]>('/batch');
-  }
-
-  /**
-   * Cancel a batch job
-   */
-  async cancelBatch(jobId: string): Promise<BatchJob> {
-    return this.request<BatchJob>(`/batch/${jobId}`, {
-      method: 'DELETE',
-    });
-  }
-
-  // -------------------------------------------------------------------------
-  // Style Variations
-  // -------------------------------------------------------------------------
-
-  /**
-   * Generate style variations for a project
-   */
-  async generateVariations(params: {
-    projectId: string;
-    prompt: string;
-    videoFormat?: 'landscape' | 'portrait' | 'square';
-    styles?: string[];
-    existingCode?: string;
-    model?: 'sonnet' | 'haiku';
-  }): Promise<VariationsResult> {
-    return this.request<VariationsResult>('/variations', {
-      method: 'POST',
-      body: JSON.stringify(params),
-    });
-  }
-
-  /**
-   * List variations for a project
-   */
-  async listVariations(projectId: string): Promise<{ projectId: string; variations: Variation[]; totalCount: number }> {
-    return this.request<{ projectId: string; variations: Variation[]; totalCount: number }>(`/variations/${projectId}`);
-  }
-
-  /**
-   * Apply a variation to a project
-   */
-  async applyVariation(projectId: string, variationId: string): Promise<{ message: string; projectId: string; variationId: string; style: string }> {
-    return this.request<{ message: string; projectId: string; variationId: string; style: string }>(`/variations/${projectId}`, {
-      method: 'POST',
-      body: JSON.stringify({ variationId }),
-    });
-  }
-
-  // -------------------------------------------------------------------------
   // Assets
   // -------------------------------------------------------------------------
 
   /**
-   * Upload a single image for use in batch manifests and agent flows.
+   * Upload a single image so agent flows can reference it by URL.
    * Skips the shared `request` helper because multipart bodies must NOT
    * carry a `Content-Type: application/json` header — the runtime has to
    * set its own multipart boundary.
@@ -472,50 +345,6 @@ export class FramlitClient {
   }
 
   // -------------------------------------------------------------------------
-  // Campaign Agent (multi-segment plan + parallel fan-out)
-  // -------------------------------------------------------------------------
-
-  /**
-   * Run the agentic loop (read-only tools: brand / products / styles)
-   * to produce a structured CampaignPlan from a one-line brief.
-   * Pro-only. Costs CREDIT_COSTS.campaignAgentPlan (10).
-   */
-  async campaignPlan(params: { brief: string }): Promise<{ plan: CampaignPlan; creditsSpent: number }> {
-    return this.request<{ plan: CampaignPlan; creditsSpent: number }>(
-      '/campaign/plan',
-      { method: 'POST', body: JSON.stringify(params) },
-    );
-  }
-
-  /**
-   * Execute a CampaignPlan — fans out to one Sonnet generation per
-   * segment in parallel, persists run + variations, returns runId +
-   * results. Costs N segments × CREDIT_COSTS.campaignAgentExecutePerSegment.
-   * Failed segments are NOT charged.
-   */
-  async campaignExecute(params: { plan: CampaignPlan }): Promise<CampaignExecuteResult> {
-    return this.request<CampaignExecuteResult>('/campaign/execute', {
-      method: 'POST',
-      body: JSON.stringify(params),
-    });
-  }
-
-  /** List recent campaign runs (capped 50). Free. */
-  async listCampaignRuns(): Promise<CampaignRun[]> {
-    const result = await this.request<{ runs: CampaignRun[] }>('/campaign/runs');
-    return result.runs;
-  }
-
-  /** Get one campaign run + its variations + linked projects. Free. */
-  async getCampaignRun(runId: string): Promise<{
-    run: CampaignRun;
-    variations: CampaignVariation[];
-    projects: Array<{ id: string; title: string; created_at: string; video_format: string }>;
-  }> {
-    return this.request(`/campaign/runs/${runId}`);
-  }
-
-  // -------------------------------------------------------------------------
   // Brand DNA
   // -------------------------------------------------------------------------
 
@@ -574,7 +403,7 @@ export interface SceneRead {
 const USER_AGENT = 'framlit-mcp/0.7.0';
 
 // ---------------------------------------------------------------------------
-// Narrated ad / Campaign / Brand types
+// Narrated ad / Brand types
 // ---------------------------------------------------------------------------
 
 export interface NarratedAdResult {
@@ -628,51 +457,6 @@ export interface NarratedAdStages {
   code:
     | (Record<string, unknown> & { _meta?: { costUsd?: number; durationMs?: number } })
     | null;
-}
-
-export interface CampaignPlanSegment {
-  name: string;
-  audience: string;
-  hook: string;
-  recommended_styles: string[];
-  ad_count: number;
-  example_headlines?: string[];
-}
-
-export interface CampaignPlan {
-  campaign_name: string;
-  summary: string;
-  segments: CampaignPlanSegment[];
-  total_ads: number;
-  estimated_credits: number;
-  requires_from_user: string[];
-  rationale: string;
-}
-
-export interface CampaignVariation {
-  segment_name: string;
-  style: string;
-  code: string | null;
-  error: string | null;
-  model?: string;
-}
-
-export interface CampaignExecuteResult {
-  runId: string;
-  variations: CampaignVariation[];
-  creditsSpent: number;
-  succeeded: number;
-  total: number;
-}
-
-export interface CampaignRun {
-  id: string;
-  plan: CampaignPlan;
-  status: string;
-  total_credits_spent: number;
-  error: string | null;
-  created_at: string;
-  completed_at: string | null;
 }
 
 export interface BrandColor {

@@ -33,14 +33,13 @@ const SERVER_VERSION = (() => {
 
 // ---------------------------------------------------------------------------
 // Service filter — agents can subset the tool registry to keep their context
-// window small. CLI:  framlit mcp --services narration,campaign,brand
-//                     npx framlit-mcp --services batch,brand
-// Env:                FRAMLIT_MCP_SERVICES=batch,brand
+// window small. CLI:  framlit mcp --services narration,scene,brand
+//                     npx framlit-mcp --services scene,brand
+// Env:                FRAMLIT_MCP_SERVICES=scene,brand
 // CLI flag wins over env. Empty / absent → load everything.
 // ---------------------------------------------------------------------------
 const ALL_CATEGORIES: ReadonlyArray<ToolEntry['category']> = [
-  'generate', 'project', 'render', 'template', 'credits',
-  'preview', 'batch', 'narration', 'campaign', 'brand',
+  ...new Set(TOOL_REGISTRY.map((t) => t.category)),
 ];
 
 function parseServicesFilter(): ReadonlySet<ToolEntry['category']> | null {

@@ -34,8 +34,7 @@ CI, containers, and headless agents.
 ## Rules of engagement (read before mutating)
 
 1. **Always use `--dry-run` first** on mutating commands (`generate`, `modify`,
-   `render`, `batch *`, `variations generate`, `narration generate`, `campaign
-   *`, `brand set`). Returns the resolved payload + estimated cost without
+   `render`, `narration generate`, `scene create`, `brand set`). Returns the resolved payload + estimated cost without
    spending credits or hitting Lambda. Works without an API key.
 2. **Always use `--output json`** when you intend to parse the output. Auto-on
    when stdout is piped, but be explicit — text mode is for humans.
@@ -43,21 +42,22 @@ CI, containers, and headless agents.
    1:1 tool schema (`framlit schema <tool>`), so you only have to learn one
    surface. `--json -` reads from stdin; `--json-file <path>` reads from disk.
 4. **Stream long-running ops with `--poll`** (NDJSON to stdout). Available on
-   `render status`, `batch start`, `batch status`. Each line is a status
-   frame — terminate when `status` is `completed` / `failed` / `cancelled`.
-5. **Confirm before deletes / cancels.** `batch cancel` is irreversible.
-6. **Resolve IDs by listing** (`projects list`, `batch list`, `templates`).
-   Never guess project / batch / template IDs — they are validated as
+   `render status`. Each line is a status frame; terminate when `status` is
+   `completed` or `failed`.
+5. **Confirm before overwriting.** `scene create --project <id>` replaces that
+   project's video.
+6. **Resolve IDs by listing** (`projects list`, `templates`).
+   Never guess project / render / template IDs. They are validated as
    `[A-Za-z0-9_-]+` and bad values fail loudly.
 7. **Respect rate limits.** Code-gen tools cost credits (`generate`,
-   `modify`, `narration generate`, `campaign execute`). The user pays for
+   `modify`, `narration generate`). The user pays for
    every retry — fix prompts, don't loop.
 
 ## Discoverability
 
 ```bash
 framlit help                       # full command reference
-framlit schema                     # JSON Schema for every tool (29 tools)
+framlit schema                     # JSON Schema for every tool (18 tools)
 framlit schema framlit_generate_code   # one tool's schema
 framlit version                    # current package version
 ```
@@ -92,12 +92,8 @@ See `framlit credits` for current balance. Costs are stable but check
 | Surface | Credits |
 |---|---|
 | `generate`, `modify` | 1 each |
-| `variations generate` | 1 / variation |
-| `batch create` | 0.2 / video |
 | `narration generate` | 3 (Pro only, 1 monthly slot) |
-| `campaign plan` | 10 (Pro only) |
-| `campaign execute` | 2 / segment (Pro only) |
-| Everything else (list/get/render/cancel/cap/brand) | 0 |
+| Everything else (list/get/render/scene/cap/brand) | 0 |
 
 ## Codebase layout (if you're editing framlit-cli itself)
 
@@ -114,7 +110,7 @@ src/
     validation.ts         validateResourceId, validateSafePath, etc.
     exit-codes.ts         EXIT.* constants
   mcp/server.ts           MCP stdio server (wraps registry)
-tests/                    Vitest — 72 tests, 5 files
+tests/                    Vitest - 68 tests, 5 files
 ```
 
 Adding a new tool:
@@ -138,7 +134,7 @@ The MCP server picks up new tools automatically — same registry.
 ## Verify before commit
 
 ```bash
-npm run build && npm test          # tsc + 72 vitest tests must pass
+npm run build && npm test          # tsc + 68 vitest tests must pass
 npm run lint                       # eslint
 ```
 

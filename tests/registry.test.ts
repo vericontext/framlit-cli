@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { TOOL_REGISTRY, getToolByName, getToolNames, zodToJsonSchema } from '../src/core/registry';
 
 describe('Tool Registry', () => {
-  it('should have all tools registered (v0.11 added scene tools)', () => {
-    expect(TOOL_REGISTRY).toHaveLength(30);
+  it('should have all tools registered (v0.12 retired batch, variations and campaign)', () => {
+    expect(TOOL_REGISTRY).toHaveLength(18);
   });
 
   it('should have unique tool names', () => {
@@ -40,14 +40,13 @@ describe('Tool Registry', () => {
 
   it('getToolNames returns all names', () => {
     const names = getToolNames();
-    expect(names).toHaveLength(30);
+    expect(names).toHaveLength(18);
     expect(names).toContain('framlit_generate_code');
     expect(names).toContain('framlit_create_scene');
     expect(names).toContain('framlit_get_scene');
     expect(names).toContain('framlit_render_video');
     // v0.7 additions
     expect(names).toContain('framlit_generate_narrated_ad');
-    expect(names).toContain('framlit_campaign_plan');
     expect(names).toContain('framlit_get_brand');
   });
 
@@ -59,12 +58,14 @@ describe('Tool Registry', () => {
       expect(tool.credits).toBe(1);
     }
 
-    // Batch and variation tools have string-based costs
-    const batchCreate = getToolByName('framlit_batch_create');
-    expect(batchCreate!.credits).toBe('0.2/video');
+    expect(getToolByName('framlit_generate_narrated_ad')!.credits).toBe(3);
+  });
 
-    const genVariations = getToolByName('framlit_generate_variations');
-    expect(genVariations!.credits).toBe('1/variation');
+  it('does not register the retired batch, variations and campaign tools', () => {
+    const names = getToolNames();
+    for (const name of names) {
+      expect(name).not.toMatch(/batch|variation|campaign/);
+    }
   });
 });
 

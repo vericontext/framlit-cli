@@ -92,7 +92,7 @@ export const previewCodeSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
-// Batch
+// Scenes
 // ---------------------------------------------------------------------------
 
 export const createSceneSchema = z.object({
@@ -103,39 +103,6 @@ export const createSceneSchema = z.object({
 
 export const getSceneSchema = z.object({
   projectId: z.string().describe('The project ID.'),
-});
-
-export const createBatchSchema = z.object({
-  rows: z.string().describe('JSON array of row objects (e.g., [{"productName":"Shoe","price":"$99","productImage":"https://..."}]). Each row generates one video.'),
-  templateId: z.string().optional().describe('Template ID to use as base. Either templateId or templateCode is required.'),
-  templateCode: z.string().optional().describe('Template code to use (if not using a template ID). Must be code Framlit generated or an existing project or template; other code is rejected with UNVERIFIED_CODE.'),
-});
-
-export const batchJobIdSchema = z.object({
-  jobId: z.string().describe('The batch job ID returned from framlit_batch_create.'),
-});
-
-export const listBatchesSchema = z.object({});
-
-// ---------------------------------------------------------------------------
-// Style Variations
-// ---------------------------------------------------------------------------
-
-export const generateVariationsSchema = z.object({
-  projectId: z.string().describe('The project ID to generate variations for.'),
-  prompt: z.string().describe('Description of the video (used to guide style application).'),
-  styles: z.string().optional().describe('Comma-separated style names: minimal, bold, dynamic, cinematic, energetic, playful. Defaults to "minimal,bold,dynamic". Max depends on plan.'),
-  existingCode: z.string().optional().describe('Existing code to create variations of. If omitted, generates from prompt.'),
-  model: z.string().optional().describe('AI model: "sonnet" (quality, default) or "haiku" (speed).'),
-});
-
-export const listVariationsSchema = z.object({
-  projectId: z.string().describe('The project ID.'),
-});
-
-export const applyVariationSchema = z.object({
-  projectId: z.string().describe('The project ID.'),
-  variationId: z.string().describe('The variation ID to apply.'),
 });
 
 // ---------------------------------------------------------------------------
@@ -156,24 +123,6 @@ export const narrationCapSchema = z.object({});
 export const narratedAdStagesSchema = z.object({
   projectId: z.string().describe('The narrated-ad project ID returned from `framlit narrated`.'),
   format: z.enum(['json', 'md']).optional().describe('Output format. "json" (default) or "md" for the markdown bundle.'),
-});
-
-// ---------------------------------------------------------------------------
-// Campaign Agent (multi-segment plan + parallel fan-out)
-// ---------------------------------------------------------------------------
-
-export const campaignPlanSchema = z.object({
-  brief: z.string().min(1).max(400).describe('One-line campaign brief, e.g. "Black Friday push for outerwear". Max 400 chars.'),
-});
-
-export const campaignExecuteSchema = z.object({
-  plan: z.unknown().describe('CampaignPlan JSON returned from `framlit campaign plan`. Pass through verbatim.'),
-});
-
-export const listCampaignRunsSchema = z.object({});
-
-export const getCampaignRunSchema = z.object({
-  runId: z.string().describe('The campaign run ID from `framlit campaign runs`.'),
 });
 
 // ---------------------------------------------------------------------------

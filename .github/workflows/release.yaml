@@ -1,4 +1,4 @@
-# Publish to npm when a version tag is pushed (git tag v0.11.0 && git push origin v0.11.0).
+# Publish to npm when a version tag is pushed (git tag v0.12.0 && git push origin v0.12.0).
 #
 # Uses npm Trusted Publishing (OIDC): npm trusts this workflow in this
 # repository, so no npm token is stored anywhere. The package must list

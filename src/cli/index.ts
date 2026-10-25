@@ -37,10 +37,7 @@ import { loadConfig } from './config.js';
 import { cmdLogin } from './commands/login.js';
 import { cmdWhoami } from './commands/whoami.js';
 import { cmdLogout } from './commands/logout.js';
-import { cmdBatch } from './commands/batch.js';
-import { cmdVariations } from './commands/variations.js';
 import { cmdNarration } from './commands/narration.js';
-import { cmdCampaign } from './commands/campaign.js';
 import { cmdBrand } from './commands/brand.js';
 import { cmdScene } from './commands/scene.js';
 
@@ -116,21 +113,9 @@ COMMANDS
   templates                Browse video templates
   preview <code|file>      Create a preview URL
   credits                  Check credit balance
-  batch create             Create a batch job (--rows / --rows-file / --manifest + --template-id)
-  batch start <jobId>      Start rendering a batch job (--poll → NDJSON stream)
-  batch status <jobId>     Check batch status (--poll → NDJSON stream)
-  batch list               List all batch jobs
-  batch cancel <jobId>     Cancel a batch job
-  variations generate <projectId> --prompt "..."   Generate style variations
-  variations list <projectId>                      List variations for a project
-  variations apply <projectId> <variationId>       Apply a variation to project
   narration generate "<brief>"   Full narrated-ad pipeline (Pro, 3 cr, ~90-180s)
   narration cap                  Monthly narrated-ad cap status
   narration stages <id>          Inspect script + audio + storyboard + code
-  campaign plan "<brief>"        Plan a multi-segment campaign (Pro, 10 cr)
-  campaign execute --plan-file   Fan out a CampaignPlan in parallel (Pro, 2 cr/segment)
-  campaign runs                  List recent campaign runs
-  campaign run <runId>           One run + variations + linked projects
   brand get                      Get effective brand DNA
   brand set --json '<payload>'   Upsert your brand profile
   scene create --file <scene.json> [--name] [--project <id>]
@@ -161,9 +146,6 @@ EXAMPLES
   framlit render status xyz789 --poll
   framlit schema framlit_generate_code
   echo '{"prompt":"test"}' | framlit generate --json -
-  framlit batch create --rows-file rows.json --template-id flash-sale-burst
-  framlit batch create --manifest catalog.json --template-id spotlight-minimal
-  framlit batch start job_abc --poll | jq -r 'select(.status=="completed")'
 
 AUTH
   Run \`framlit login\` once to save your API key to ~/.framlit/config.
@@ -487,31 +469,14 @@ async function main(): Promise<void> {
       category: { type: 'string' },
       official: { type: 'boolean' },
 
-      // render status / batch start / batch status
+      // render status
       poll: { type: 'boolean' },
-
-      // batch
-      rows: { type: 'string' },
-      'rows-file': { type: 'string' },
-      manifest: { type: 'string' },
-      'template-id': { type: 'string' },
-      'template-code': { type: 'string' },
-
-      // variations
-      prompt: { type: 'string' },
-      styles: { type: 'string' },
-      'existing-code': { type: 'string' },
-      model: { type: 'string' },
 
       // narration
       target: { type: 'string' },
       voice: { type: 'string' },
       lang: { type: 'string' },
       out: { type: 'string' },
-
-      // campaign
-      plan: { type: 'string' },
-      'plan-file': { type: 'string' },
 
       // scene
       file: { type: 'string' },
@@ -572,17 +537,8 @@ async function main(): Promise<void> {
       case 'credits':
         await cmdCredits(values);
         break;
-      case 'batch':
-        await cmdBatch(rest, values, getApiKey);
-        break;
-      case 'variations':
-        await cmdVariations(rest, values, getApiKey);
-        break;
       case 'narration':
         await cmdNarration(rest, values, getApiKey);
-        break;
-      case 'campaign':
-        await cmdCampaign(rest, values, getApiKey);
         break;
       case 'brand':
         await cmdBrand(rest, values, getApiKey);

@@ -28,9 +28,7 @@ export interface ToolEntry {
     | 'template'
     | 'credits'
     | 'preview'
-    | 'batch'
     | 'narration'
-    | 'campaign'
     | 'brand'
     | 'scene';
 }
@@ -48,7 +46,7 @@ Costs 1 credit base. With imageGen.enabled: +3 cr (flux-schnell) or +12 cr (gpt-
 
 The generated code is a valid Remotion composition that can be previewed in browser, rendered to MP4, or saved as a project.
 
-Supports: logo animations, product demos, social media content, data visualizations, 3D animations, narrated videos, and style variations.
+Supports: logo animations, product demos, social media content, data visualizations, 3D animations, and narrated videos.
 
 When the user mentions "product" / "showcase" / "ad" but does not have a product photo, set imageGen.enabled = true so the agent calls generate_product_image first instead of hallucinating an image URL or painting a CSS placeholder.`,
     schema: schemas.generateCodeSchema,
@@ -185,82 +183,6 @@ Preview URLs expire after 24 hours. No credits are consumed.`,
     category: 'preview',
   },
 
-  // Batch
-  {
-    name: 'framlit_batch_create',
-    description: `Create a batch video generation job from product data rows.
-Each row becomes one personalized video. Costs 0.2 credits per video.
-
-Pass rows as a JSON array string. Each object's keys map to template props (e.g., productName, price, productImage).
-
-Example rows: [{"productName":"Sneaker","price":"$99","productImage":"https://..."}]`,
-    schema: schemas.createBatchSchema,
-    handler: (c, a) => handlers.handleBatchCreate(c, a as z.infer<typeof schemas.createBatchSchema>),
-    credits: '0.2/video',
-    category: 'batch',
-  },
-  {
-    name: 'framlit_batch_start',
-    description: `Start rendering a batch job. All videos are rendered on AWS Lambda.
-Returns results with download URLs when complete. This may take several minutes for large batches.`,
-    schema: schemas.batchJobIdSchema,
-    handler: (c, a) => handlers.handleBatchStart(c, a as z.infer<typeof schemas.batchJobIdSchema>),
-    credits: 0,
-    category: 'batch',
-  },
-  {
-    name: 'framlit_batch_status',
-    description: 'Check the status of a batch job and get download URLs for completed videos.',
-    schema: schemas.batchJobIdSchema,
-    handler: (c, a) => handlers.handleBatchStatus(c, a as z.infer<typeof schemas.batchJobIdSchema>),
-    credits: 0,
-    category: 'batch',
-  },
-  {
-    name: 'framlit_batch_list',
-    description: 'List all your batch jobs with their status and progress.',
-    schema: schemas.listBatchesSchema,
-    handler: (c) => handlers.handleBatchList(c),
-    credits: 0,
-    category: 'batch',
-  },
-  {
-    name: 'framlit_batch_cancel',
-    description: 'Cancel a pending or processing batch job. Unprocessed videos are refunded.',
-    schema: schemas.batchJobIdSchema,
-    handler: (c, a) => handlers.handleBatchCancel(c, a as z.infer<typeof schemas.batchJobIdSchema>),
-    credits: 0,
-    category: 'batch',
-  },
-
-  // Style Variations
-  {
-    name: 'framlit_generate_variations',
-    description: `Generate style variations of a video for A/B testing.
-Each variation applies a different visual style (minimal, bold, dynamic, cinematic, energetic, playful).
-Costs 1 credit per variation. Free: 2 max, Editor Pro: 5, Studio: 10.`,
-    schema: schemas.generateVariationsSchema,
-    handler: (c, a) => handlers.handleGenerateVariations(c, a as z.infer<typeof schemas.generateVariationsSchema>),
-    credits: '1/variation',
-    category: 'generate',
-  },
-  {
-    name: 'framlit_list_variations',
-    description: 'List all style variations for a project.',
-    schema: schemas.listVariationsSchema,
-    handler: (c, a) => handlers.handleListVariations(c, a as z.infer<typeof schemas.listVariationsSchema>),
-    credits: 0,
-    category: 'generate',
-  },
-  {
-    name: 'framlit_apply_variation',
-    description: 'Apply a style variation to a project. Updates the project code with the selected variation.',
-    schema: schemas.applyVariationSchema,
-    handler: (c, a) => handlers.handleApplyVariation(c, a as z.infer<typeof schemas.applyVariationSchema>),
-    credits: 0,
-    category: 'generate',
-  },
-
   // Narrated ads (HyperFrame-style 3-stage pipeline)
   {
     name: 'framlit_generate_narrated_ad',
@@ -298,49 +220,6 @@ Returns the new projectId, audio URL, storyboard scenes, and generated TSX.`,
       ),
     credits: 0,
     category: 'narration',
-  },
-
-  // Campaign Agent (multi-segment plan + parallel fan-out)
-  {
-    name: 'framlit_campaign_plan',
-    description: `Run the Campaign Agent to plan a multi-segment campaign from a one-line brief.
-Pro-only. Costs 10 credits.
-Returns a structured CampaignPlan with audience segments, hooks, recommended styles, and ad counts. Pass the plan to framlit_campaign_execute to fan out to actual videos.`,
-    schema: schemas.campaignPlanSchema,
-    handler: (c, a) =>
-      handlers.handleCampaignPlan(c, a as z.infer<typeof schemas.campaignPlanSchema>),
-    credits: 10,
-    category: 'campaign',
-  },
-  {
-    name: 'framlit_campaign_execute',
-    description: `Execute a CampaignPlan — fans out to one Sonnet generation per segment in parallel. Pro-only. Costs 2 credits per segment (failed segments are not charged). Persists a campaign_run + per-segment variations. ~20-40s wall time for 2-3 segments.`,
-    schema: schemas.campaignExecuteSchema,
-    handler: (c, a) =>
-      handlers.handleCampaignExecute(
-        c,
-        a as z.infer<typeof schemas.campaignExecuteSchema>,
-      ),
-    credits: '2/segment',
-    category: 'campaign',
-  },
-  {
-    name: 'framlit_list_campaign_runs',
-    description: 'List recent campaign runs (capped at 50). Free.',
-    schema: schemas.listCampaignRunsSchema,
-    handler: (c) => handlers.handleListCampaignRuns(c),
-    credits: 0,
-    category: 'campaign',
-  },
-  {
-    name: 'framlit_get_campaign_run',
-    description:
-      'Get one campaign run + its per-segment variations + linked projects. Free. Use to poll execution status or pick up generated code per segment.',
-    schema: schemas.getCampaignRunSchema,
-    handler: (c, a) =>
-      handlers.handleGetCampaignRun(c, a as z.infer<typeof schemas.getCampaignRunSchema>),
-    credits: 0,
-    category: 'campaign',
   },
 
   // Brand DNA

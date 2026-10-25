@@ -1,6 +1,6 @@
 ---
 name: framlit
-description: Rules and patterns for using the framlit CLI / MCP server to generate, render, batch-personalize, and ship Remotion video ads. Load when the user mentions framlit, Remotion video generation, ad batch personalization, narrated ads, or campaign planning.
+description: Rules and patterns for using the framlit CLI / MCP server to generate, design, render, and ship Remotion video ads. Load when the user mentions framlit, Remotion video generation, Framlit scenes, narrated ads, or brand profiles.
 ---
 
 # framlit Skill
@@ -10,7 +10,7 @@ description: Rules and patterns for using the framlit CLI / MCP server to genera
 > via `/api/mcp/*`. Same convention as `aws`, `gh`, `vercel`.
 
 framlit is an AI video-ad generator for e-commerce. You'll use it to turn a
-prompt or product catalog into MP4s rendered on AWS Lambda. Same package
+prompt or a JSON scene into MP4s rendered on AWS Lambda. Same package
 ships both the `framlit` CLI and `framlit-mcp` server — pick whichever
 surface your harness wires up.
 
@@ -24,15 +24,15 @@ surface your harness wires up.
    supports it. The shape is the canonical tool schema (see
    `framlit schema <tool_name>`). Stdin (`--json -`) and file
    (`--json-file <path>`) variants exist for every json-capable command.
-4. **Stream long ops with `--poll`**. Render and batch operations emit NDJSON
-   status frames — terminate when status is `completed` / `failed` /
-   `cancelled`. Don't poll-and-sleep yourself.
-5. **Never guess IDs.** Resolve project / batch / template / run IDs by
+4. **Stream long ops with `--poll`**. `render status --poll` emits NDJSON
+   status frames; terminate when status is `completed` or `failed`.
+   Don't poll-and-sleep yourself.
+5. **Never guess IDs.** Resolve project / render / template IDs by
    listing first. IDs are validated as `[A-Za-z0-9_-]+` and bad values
    raise `VALIDATION_ERROR` (exit 2).
-6. **Confirm with the user before destructive ops.** `batch cancel` is
-   irreversible. Code generation is irreversible (credits spent).
-7. **Respect Pro gating.** `narration *`, `campaign *`, and `brand set`
+6. **Confirm with the user before destructive ops.** `scene create --project`
+   replaces that project's video. Code generation is irreversible (credits spent).
+7. **Respect Pro gating.** `narration *` and `brand set`
    beyond name+colors require Pro. Free-tier calls return `403`.
 
 ## Auth
@@ -88,31 +88,7 @@ already mentioned a reference photo. The generated image is saved to the
 user's `workspace-assets` Supabase bucket and lands inside `<Img src=...>`
 in the returned code automatically — no extra step.
 
-### 2. Batch-personalize from a product catalog
-
-```bash
-# Local images: --manifest. Any key ending in `Path` is uploaded;
-# the URL replaces the matching non-`Path` key.
-cat > catalog.json <<'JSON'
-[
-  { "productImagePath": "./photos/runner.jpg", "productName": "Cloud Runner", "price": "$129" },
-  { "productImagePath": "./photos/vest.jpg",   "productName": "Hydration Vest", "price": "$89" }
-]
-JSON
-
-framlit batch create --manifest catalog.json --template-id spotlight-minimal \
-  --dry-run                            # preview cost (0.2 cr/video)
-
-framlit batch create --manifest catalog.json --template-id spotlight-minimal \
-  --output json | jq -r .data.jobId | \
-  xargs -I {} framlit batch start {} --poll --output json | \
-  jq -r 'select(.status=="completed") | .results[].videoUrl'
-```
-
-Hosted images? Use `--rows-file rows.json` instead — same structure, but
-plain `productImage` URLs.
-
-### 3. Narrated ad (Pro, 3 cr, ~90-180s wall time)
+### 2. Narrated ad (Pro, 3 cr, ~90-180s wall time)
 
 ```bash
 framlit narration cap                                   # check monthly slot
@@ -123,18 +99,7 @@ framlit narration generate --json '{"brief":"Built for runners who hate stiff sh
 framlit narration stages <projectId> --format md > narration.md
 ```
 
-### 4. Multi-segment campaign (Pro)
-
-```bash
-framlit campaign plan --json '{"brief":"Black Friday push for outerwear"}' \
-  --output json > plan.json                 # 10 cr
-framlit campaign execute --plan-file plan.json \
-  --dry-run                                 # estimates 2 cr/segment
-framlit campaign execute --plan-file plan.json --output json
-framlit campaign run <returned-runId> --output json
-```
-
-### 5. Brand DNA upsert
+### 3. Brand DNA upsert
 
 ```bash
 # Free tier: name + 3 colors + fonts only
@@ -146,7 +111,7 @@ framlit brand set --json-file brand.json --output json
 framlit brand get --output json
 ```
 
-### 6. Design the video yourself (Framlit Scene v1, 0 credits, v0.11.0+)
+### 4. Design the video yourself (Framlit Scene v1, 0 credits, v0.11.0+)
 
 When you know exactly what the video should look like, write it as a scene
 instead of a prompt. Framlit compiles the JSON into an editable project:
@@ -193,7 +158,7 @@ framlit scene create --file scene.json --project "$PROJECT" --output json
 
 ```bash
 framlit help                       # all commands + flags
-framlit schema                     # full tool registry (28 tools, JSON Schema)
+framlit schema                     # full tool registry (18 tools, JSON Schema)
 framlit schema framlit_generate_code   # one tool's input schema
 ```
 
@@ -232,13 +197,11 @@ Common error codes you should expect to handle:
 - ❌ Running `generate` in a retry loop — every attempt costs 1 credit.
 - ❌ Building payloads with shell string interpolation that contains user
   input. Pipe through `jq -n` instead, or use `--json-file`.
-- ❌ Using `framlit batch cancel` without confirming — irreversible.
 - ❌ Treating text-mode output as parseable. It isn't.
 
 ## When to escalate to the user
 
 - A `generate` / `modify` request returns code that doesn't match the brief.
   Don't loop more than once — surface the brief mismatch.
-- `batch create --dry-run` shows >50 videos (~10+ credits). Confirm scope.
-- Any Pro-gated call (`narration`, `campaign`, full `brand set`) when
+- Any Pro-gated call (`narration`, full `brand set`) when
   `framlit whoami` shows `plan: hobby`. Don't try, you'll get 403.

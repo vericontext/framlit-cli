@@ -7,9 +7,8 @@
 > `/api/mcp/*` endpoints. MIT licensed, PRs welcome.
 
 CLI for [Framlit](https://framlit.app) — AI-powered video generation. Generate
-Remotion videos from your terminal, render via AWS Lambda, batch-personalize
-hundreds at a time. Ships an MCP server for Claude / Cursor / VS Code on the
-side.
+Remotion videos from your terminal, edit them as JSON scenes, and render via
+AWS Lambda. Ships an MCP server for Claude / Cursor / VS Code on the side.
 
 ```bash
 npm install -g framlit
@@ -19,14 +18,14 @@ framlit generate "Logo animation with rotating text"
 
 ## Why a CLI
 
-The CLI is the canonical surface for everything programmatic — CI pipelines,
-cron jobs, agency batch runs, headless personalization for product catalogs.
-The web app handles single videos and visual editing; the CLI handles the
-hundredth and the thousandth.
+The CLI is the canonical surface for everything programmatic: CI pipelines,
+cron jobs, scripted renders, and coding agents that design videos as JSON.
+The web app handles visual editing; the CLI handles everything you want to
+automate.
 
 - **Composable**: every command supports `--output json` (auto when piped) +
   `--json '<payload>'` for raw JSON-RPC-style input.
-- **Streamable**: long-running calls (`render --poll`, `batch start --poll`)
+- **Streamable**: long-running calls (`render status --poll`)
   emit NDJSON status frames you can pipe through `jq`.
 - **Safe to script**: every mutating command supports `--dry-run`. Strict
   input validation rejects path traversal, control chars, ID injection.
@@ -68,29 +67,10 @@ framlit projects update <id> --name "New Name"
 framlit render <projectId>
 framlit render status <renderId> --poll          # NDJSON until done
 
-# Batch (many videos from one template)
-framlit batch create --rows-file rows.json --template-id flash-sale-burst
-framlit batch create --manifest catalog.json --template-id spotlight-minimal  # local images
-framlit batch start <jobId> --poll               # NDJSON until done
-framlit batch status <jobId>
-framlit batch list
-framlit batch cancel <jobId>
-
-# Style variations (A/B testing)
-framlit variations generate <projectId> --prompt "..." --styles minimal,bold
-framlit variations list <projectId>
-framlit variations apply <projectId> <variationId>
-
 # Narrated ads — script + voiceover + word-synced visuals (Pro, v0.7+)
 framlit narration generate "Built for runners who hate stiff shoes"
 framlit narration cap                        # current month usage / cap
 framlit narration stages <projectId> --format md > narration.md
-
-# Campaigns — multi-segment plan + parallel fan-out (Pro, v0.7+)
-framlit campaign plan "Black Friday push for outerwear" --output json > plan.json
-framlit campaign execute --plan-file plan.json
-framlit campaign runs
-framlit campaign run <runId>
 
 # Scenes — design the video as JSON, edit it in Framlit (v0.11+, 0 credits)
 framlit scene create --file scene.json --name "Launch"
@@ -121,7 +101,7 @@ Run `framlit help` for the full reference.
 | `--sanitize` | Strip known prompt-injection markers from text inputs (`brief`, `prompt`, `instruction`) before dispatching. Reports stripped lines on stderr. Opt-in. |
 | `--image-gen` (`generate` only) | Force AI product image generation. Adds 3 cr (default flux-schnell) or 12 cr (`--image-gen-model gpt-image-2`). Use when prompt mentions a product but no image is attached — prevents hallucinated URLs / CSS-painted placeholders. v0.9.0+. |
 | `--dry-run` | Validate + preview a mutating call without executing. Works without an API key. |
-| `--poll` | NDJSON status stream until terminal state. On `render status`, `batch start`, `batch status`. |
+| `--poll` | NDJSON status stream until terminal state. On `render status`. |
 | `framlit schema [tool]` | Runtime JSON Schema introspection for agents. |
 
 For agents loading the CLI as a tool, ship these alongside your harness:
@@ -133,10 +113,10 @@ For agents loading the CLI as a tool, ship these alongside your harness:
 The MCP server can be subset to keep tool count small:
 
 ```bash
-# Only load narration + campaign + brand tools (7/28) — saves prompt tokens
-npx framlit-mcp --services narration,campaign,brand
+# Only load narration + scene + brand tools (7/18) to save prompt tokens
+npx framlit-mcp --services narration,scene,brand
 # or via env:
-FRAMLIT_MCP_SERVICES=batch,brand npx framlit-mcp
+FRAMLIT_MCP_SERVICES=scene,brand npx framlit-mcp
 ```
 
 Errors go to stderr as JSON when output is JSON:
@@ -147,56 +127,6 @@ Errors go to stderr as JSON when output is JSON:
 
 Exit codes: `0` success · `1` general · `2` invalid args / validation · `3`
 auth required · `4` API error.
-
-## Example: batch-personalize a catalog
-
-```bash
-# rows.json — one object per video; keys map to template props
-cat > rows.json <<'JSON'
-[
-  {"productName":"Linen Tee",   "price":"$48", "productImage":"https://..."},
-  {"productName":"Wool Hoodie", "price":"$129","productImage":"https://..."}
-]
-JSON
-
-# Create + start, stream until done, extract download URLs
-framlit batch create --rows-file rows.json --template-id flash-sale-burst --output json \
-  | jq -r '.jobId' \
-  | xargs -I {} framlit batch start {} --poll \
-  | jq -r 'select(.status=="completed") | .results[].videoUrl'
-```
-
-## Example: batch from a local catalog (`--manifest`)
-
-When your product photos live on disk (Etsy, Squarespace, pre-launch brands),
-use `--manifest` to upload them as part of `batch create`. Any key ending in
-`Path` is treated as a local file — the CLI uploads it and substitutes the
-resulting URL under the matching non-`Path` key.
-
-```bash
-# catalog.json lives alongside ./photos/*.jpg
-cat > catalog.json <<'JSON'
-[
-  { "productImagePath": "./photos/cloud-runner.jpg", "productName": "Cloud Runner", "price": "$129" },
-  { "productImagePath": "./photos/hydration-vest.jpg", "productName": "Hydration Vest", "price": "$89" },
-  { "productImage": "https://cdn.example.com/existing.jpg", "productName": "Signature Tee", "price": "$39" }
-]
-JSON
-
-# Dry-run first to see what will upload
-framlit batch create --manifest catalog.json --template-id spotlight-minimal --dry-run
-
-# Run for real — uploads 2 images then creates the batch
-framlit batch create --manifest catalog.json --template-id spotlight-minimal
-```
-
-Rules:
-- Field suffix `Path` → local file path (relative to the manifest's directory, or absolute).
-  The uploaded URL replaces that key with the non-`Path` counterpart.
-- Same field without `Path` → URL or data URL → passed through unchanged.
-- `http://`, `https://`, or `data:` URLs under a `*Path` key are hoisted automatically
-  (no upload trip).
-- Supported extensions: `.jpg` / `.jpeg` / `.png` / `.webp` / `.gif`. Max 5 MiB per image.
 
 ## MCP server (for IDE integration)
 
@@ -239,16 +169,13 @@ All tools below are available as both CLI commands and MCP tools.
 | `framlit_list_templates` | `framlit templates` | 0 |
 | `framlit_get_credits` | `framlit credits` | 0 |
 | `framlit_preview_code` | `framlit preview` | 0 |
-| `framlit_batch_create` | `framlit batch create` | 0.2 / video |
-| `framlit_batch_start` | `framlit batch start` | 0 |
-| `framlit_batch_status` | `framlit batch status` | 0 |
-| `framlit_batch_list` | `framlit batch list` | 0 |
-| `framlit_batch_cancel` | `framlit batch cancel` | 0 |
-| `framlit_generate_variations` | `framlit variations generate` | 1 / variation |
-| `framlit_list_variations` | `framlit variations list` | 0 |
-| `framlit_apply_variation` | `framlit variations apply` | 0 |
 | `framlit_create_scene` | `framlit scene create` | 0 |
 | `framlit_get_scene` | `framlit scene get` | 0 |
+| `framlit_generate_narrated_ad` | `framlit narration generate` | 3 (Pro) |
+| `framlit_get_narration_cap` | `framlit narration cap` | 0 |
+| `framlit_get_narrated_ad_stages` | `framlit narration stages` | 0 |
+| `framlit_get_brand` | `framlit brand get` | 0 |
+| `framlit_set_brand` | `framlit brand set` | 0 |
 
 ## Pricing
 
