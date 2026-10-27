@@ -113,7 +113,7 @@ COMMANDS
   scene get <projectId>          Read a project back as a scene, with editor edits
   schema [tool-name]       Show tool schemas (agent discovery)
   mcp                      Start MCP server (for IDE integration)
-  version                  Show version
+  version, --version, -v   Show version
   help                     Show this help
 
 GLOBAL OPTIONS
@@ -444,6 +444,7 @@ async function main(): Promise<void> {
       sanitize: { type: 'boolean' },
       'dry-run': { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
+      version: { type: 'boolean', short: 'v' },
 
       // generate / projects create
       format: { type: 'string', short: 'f' },
@@ -483,6 +484,11 @@ async function main(): Promise<void> {
 
   const command = positionals[0];
   const rest = positionals.slice(1);
+
+  if (values.version && !command) {
+    console.log(VERSION);
+    return;
+  }
 
   if (values.help || !command || command === 'help') {
     printHelp();
