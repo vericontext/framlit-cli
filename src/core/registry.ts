@@ -258,52 +258,11 @@ export function getToolNames(): string[] {
 }
 
 /**
- * Convert a Zod schema to JSON Schema (simple implementation for CLI introspection).
+ * A tool's input as JSON Schema, for MCP clients and CLI introspection.
+ * Describes what callers may send, so fields with defaults are optional.
  */
 export function zodToJsonSchema(schema: z.ZodObject<z.ZodRawShape>): Record<string, unknown> {
-  const shape = schema.shape;
-  const properties: Record<string, Record<string, unknown>> = {};
-  const required: string[] = [];
-
-  for (const [key, value] of Object.entries(shape)) {
-    const zodValue = value as z.ZodTypeAny;
-    const prop: Record<string, unknown> = {};
-
-    // Unwrap optional
-    let inner = zodValue;
-    let isOptional = false;
-    if (inner instanceof z.ZodOptional) {
-      isOptional = true;
-      inner = inner.unwrap();
-    }
-
-    // Determine type
-    if (inner instanceof z.ZodString) {
-      prop.type = 'string';
-    } else if (inner instanceof z.ZodNumber) {
-      prop.type = 'number';
-    } else if (inner instanceof z.ZodBoolean) {
-      prop.type = 'boolean';
-    } else if (inner instanceof z.ZodEnum) {
-      prop.type = 'string';
-      prop.enum = inner.options;
-    } else {
-      prop.type = 'string';
-    }
-
-    if (zodValue.description) {
-      prop.description = zodValue.description;
-    }
-
-    properties[key] = prop;
-    if (!isOptional) {
-      required.push(key);
-    }
-  }
-
-  return {
-    type: 'object',
-    properties,
-    ...(required.length > 0 ? { required } : {}),
-  };
+  const jsonSchema: Record<string, unknown> = z.toJSONSchema(schema, { io: 'input' });
+  delete jsonSchema.$schema;
+  return jsonSchema;
 }
