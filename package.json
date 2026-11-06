@@ -61,5 +61,8 @@
   "bugs": {
     "url": "https://github.com/vericontext/framlit-cli/issues"
   },
-  "homepage": "https://framlit.app/developers"
+  "homepage": "https://framlit.app/developers",
+  "overrides": {
+    "@hono/node-server": "^2.1.6"
+  }
 }
