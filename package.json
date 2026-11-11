@@ -63,6 +63,9 @@
   },
   "homepage": "https://framlit.app/developers",
   "overrides": {
-    "@hono/node-server": "^2.1.6"
+    "@hono/node-server": "^2.1.6",
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.8"
+    }
   }
 }
